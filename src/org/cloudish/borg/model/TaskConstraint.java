@@ -6,10 +6,10 @@ public class TaskConstraint {
 	String operator;
 	String attValue;
 	
-	
-	
-	public TaskConstraint(String attName2, String op, String attValue2) {
-		// TODO Auto-generated constructor stub
+	public TaskConstraint(String attName, String op, String attValue) {
+		this.attName = attName;
+		this.operator = op;
+		this.attValue = attValue;
 	}
 
 	public String getAttName() {

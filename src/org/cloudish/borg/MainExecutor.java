@@ -12,6 +12,8 @@ public class MainExecutor {
 	
 	public static void main(String[] args) throws IOException {
 		
+		long startTime = System.currentTimeMillis();
+		
 		String infraFilePath = args[0];		
 		String workloadFilePath = args[1];
 		
@@ -22,10 +24,12 @@ public class MainExecutor {
 		
 		// allocating tasks
 		for (Task task : tasks) {
+			System.out.println("TaskId:" + task.getTid());
 			double bestScore = -1;
 			Host bestHost = null;
 			
 			for (Host host : hosts) {
+				System.out.println("hostId:"+host.getId());
 				double score = host.getScore(task);
 				if (score > bestScore) {
 					bestScore = score;
@@ -34,8 +38,10 @@ public class MainExecutor {
 			}
 			
 			if (bestScore >= 0 && bestHost != null){
+				System.out.println("TaskId:" + task.getTid() + " allocated.");
 				bestHost.allocate(task);
 			} else {
+				System.out.println("TaskId:" + task.getTid() + " pending");
 				pendingQueue.add(task);
 			}			
 		}
@@ -47,6 +53,10 @@ public class MainExecutor {
 			System.out.println(host.getId() + "," + host.getCpuCapacity() + "," + host.getFreeCPU() + ","
 					+ host.getMemCapacity() + "," + host.getFreeMem());
 		}
+		
+		long now = System.currentTimeMillis();
+		
+		System.out.println("execution time: " + (now - startTime) + " milliseconds.");
 	}
 
 //	#%% format {timestamp,task_id,job_id,cpu_req,mem_req,priority,constraints}

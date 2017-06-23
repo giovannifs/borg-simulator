@@ -37,9 +37,7 @@ public class Host {
 		
 		freeCPU = cpuCapacity;
 		freeMem = memCapacity;
-		
-		System.out.println("Attributes: " + attributesStr);
-		
+
 		if (attributesStr.length() > 0) {
 			StringTokenizer stConst = new StringTokenizer(attributesStr, ";");		
 			while (stConst.hasMoreTokens()) {
@@ -67,7 +65,7 @@ public class Host {
     }
 
 	private boolean match(Task task) {
-		if (task.isAntiAffinity() && jidAllocated.contains(task.getJid())) {
+		if (jidAllocated.contains(task.getJid())) {
 			return false;
 		}
 		
@@ -78,7 +76,7 @@ public class Host {
 				return false;
 			}			
 		}
-//		check constraints and anti-afinity
+
 		return true;
 	}
 
@@ -86,7 +84,9 @@ public class Host {
 		freeCPU = freeCPU - task.getCpuReq();
 		freeMem = freeMem - task.getMemReq();
 
-		jidAllocated.add(task.getJid());		
+		if (task.isAntiAffinity()) {
+			jidAllocated.add(task.getJid());		
+		}
 	}
 
 	public long getId() {
