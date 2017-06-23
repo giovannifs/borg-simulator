@@ -22,14 +22,14 @@ public class MainExecutor {
 		
 		List<Task> pendingQueue = new ArrayList<Task>();
 		
+		int index = 0;
 		// allocating tasks
 		for (Task task : tasks) {
-			System.out.println("TaskId:" + task.getTid());
+			System.out.println("Task index:" + index);
 			double bestScore = -1;
 			Host bestHost = null;
 			
 			for (Host host : hosts) {
-				System.out.println("hostId:"+host.getId());
 				double score = host.getScore(task);
 				if (score > bestScore) {
 					bestScore = score;
@@ -38,12 +38,13 @@ public class MainExecutor {
 			}
 			
 			if (bestScore >= 0 && bestHost != null){
-				System.out.println("TaskId:" + task.getTid() + " allocated.");
+				System.out.println("Task " + index+ " allocated.");
 				bestHost.allocate(task);
 			} else {
-				System.out.println("TaskId:" + task.getTid() + " pending");
+				System.out.println("Task " + index + " pending");
 				pendingQueue.add(task);
-			}			
+			}
+			index++;
 		}
 		
 		System.out.println("pending-queue=" + pendingQueue.size());
@@ -73,7 +74,6 @@ public class MainExecutor {
 		    String line = br.readLine();
 
 		    while (line != null) {
-		    	System.out.println(line);
 		    	tasks.add(new Task(line));
 //		        sb.append(line);
 //		        sb.append(System.lineSeparator());
@@ -99,7 +99,6 @@ public class MainExecutor {
 		try {
 		    String line = br.readLine();
 		    while (line != null) {
-		    	System.out.println(line);
 		    	hosts.add(new Host(line));
 		    	line = br.readLine();
 		    }

@@ -1,7 +1,5 @@
 package org.cloudish.borg.model;
 
-import com.sun.java_cup.internal.runtime.Symbol;
-
 public class HostAttribute {
 
 	String attName;
@@ -20,36 +18,33 @@ public class HostAttribute {
 	}
 
 	public boolean match(TaskConstraint constraint) {
-		System.out.println("DENTRO DO MATCH HOSTATTRIBUTE");
-		System.out.println(constraint.getAttName() + "," + constraint.getOperator());
-		
 		switch (constraint.getOperator()) {
 		case "!=":
 			
-			if (isNumericAttr) {
+			try {
 				return Integer.valueOf(attValue) != Integer.valueOf(constraint.getAttValue());
-			} else {
+			} catch (Exception e) {
 				return !constraint.getAttValue().equals(attValue);
 			}
 			
 		case "==":
-			if (isNumericAttr) {
+			try {
 				return Integer.parseInt(attValue) == Integer.parseInt(constraint.getAttValue());
-			} else {
+			} catch (Exception e) {
 				return constraint.getAttValue().equals(attValue);
 			}
 			
 		case "<":
-			if (isNumericAttr) {
+			try {
 				return Integer.valueOf(attValue) < Integer.valueOf(constraint.getAttValue());
-			} else {
+			} catch (Exception e) {
 				return constraint.getAttValue().compareTo(attValue) == -1;
 			}
 			
 		case ">":
-			if (isNumericAttr) {
+			try {
 				return Integer.valueOf(attValue) > Integer.valueOf(constraint.getAttValue());
-			} else {
+			} catch (Exception e) {
 				return constraint.getAttValue().compareTo(attValue) == 1;
 			}
 			
