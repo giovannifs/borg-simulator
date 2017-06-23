@@ -40,12 +40,20 @@ public class MainExecutor {
 			}			
 		}
 		
+		System.out.println("pending-queue=" + pendingQueue.size());
+		
 		// generating host outputs
 		for (Host host : hosts) {
-			System.out.println();
+			System.out.println(host.getId() + "," + host.getCpuCapacity() + "," + host.getFreeCPU() + ","
+					+ host.getMemCapacity() + "," + host.getFreeMem());
 		}
 	}
 
+//	#%% format {timestamp,task_id,job_id,cpu_req,mem_req,priority,constraints}
+//	#{1,0,1,2,2,0,[{"rs", "==", "1"}, {"o/", "/=", "1"}]}.
+//	#{1,1,1,4,2,0,[{"rs", "==", "1"}, {"o/", "/=", "0"}]}.
+//	#{1,2,1,2,4,0,[{"rs", "==", "1"}, {"o/", "/=", "0"}]}.
+//	#{0,0,3418309,0.125,0.07446,9, []}.
 	private static List<Task> createTasks(String workloadFilePath) throws IOException {
 		List<Task> tasks = new ArrayList<Task>();
 		
@@ -69,6 +77,11 @@ public class MainExecutor {
 		return tasks;
 	}
 
+//	#%% Format: {host_id,host_name,cpu_capacity,mem_capacity,rs,0/,Ql,maq}
+//	#{0,"Host_1",8,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
+//	#{1,"Host_2",16,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
+
+	
 	private static List<Host> createHosts(String infraFilePath) throws IOException {
 		List<Host> hosts = new ArrayList<Host>();
 		

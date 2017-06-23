@@ -1,19 +1,111 @@
 package org.cloudish.borg.model;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.StringTokenizer;
+
 public class Host {
 
+	long id;
+	double cpuCapacity;
+	double memCapacity;
+	double freeCPU;
+	double freeMem;
+	Map<String, HostAttribute> attributes = new HashMap<>();
+	List<Double> jidAllocated = new ArrayList<>();
+
+	//	#%% Format: {host_id,host_name,cpu_capacity,mem_capacity,rs,0/,Ql,maq}
+	//	#{0,"Host_1",8,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
+	//	5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]
+
 	public Host(String line) {
-		// TODO Auto-generated constructor stub
-	}
+		StringTokenizer st = new StringTokenizer(line, "[");
 
-	public double getScore(Task task) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	public void allocate(Task task) {
-		// TODO Auto-generated method stub
+		String properties = st.nextToken();
+		
+		//creating constraints
+		String attributesStr = st.nextToken();		
+		attributesStr = attributesStr.replace("]", "").trim();
+		
+		st = new StringTokenizer(properties, ",");
+		id = Long.parseLong(st.nextToken());
+		st.nextToken(); //hostName
+		cpuCapacity = Double.parseDouble(st.nextToken());
+		memCapacity = Double.parseDouble(st.nextToken());
+		
+		freeCPU = cpuCapacity;
+		freeMem = memCapacity;
+		
+		System.out.println("Attributes: " + attributesStr);
+		
+		if (attributesStr.length() > 0) {
+			StringTokenizer stConst = new StringTokenizer(attributesStr, ";");		
+			while (stConst.hasMoreTokens()) {
+				st = new StringTokenizer(stConst.nextToken(), ",");
+				String attName = st.nextToken();
+				System.out.println(attName);
+				String attValue = st.nextToken();
+				attributes.put(attName, new HostAttribute(attName, attValue));
+			}
+		}
 		
 	}
 
+	public double getScore(Task task) {
+		if (!match(task)) {
+			return -1;
+		}
+
+		// checking capacities and calculating score
+		if (freeCPU >= task.getCpuReq() && freeMem >= task.getMemReq()) {
+			return freeCPU + freeMem;
+		} else {
+			return -1;
+		}
+    }
+
+	private boolean match(Task task) {
+		if (task.isAntiAffinity() && jidAllocated.contains(task.getJid())) {
+			return false;
+		}
+		
+		for (TaskConstraint constraint : task.getConstraints()) {
+			HostAttribute hostAtt = attributes.get(constraint.getAttName());
+			
+			if (hostAtt == null || !hostAtt.match(constraint)) {
+				return false;
+			}			
+		}
+//		check constraints and anti-afinity
+		return true;
+	}
+
+	public void allocate(Task task) {
+		freeCPU = freeCPU - task.getCpuReq();
+		freeMem = freeMem - task.getMemReq();
+
+		jidAllocated.add(task.getJid());		
+	}
+
+	public long getId() {
+		return id;
+	}
+
+	public double getCpuCapacity() {
+		return cpuCapacity;
+	}
+
+	public double getMemCapacity() {
+		return memCapacity;
+	}
+
+	public double getFreeCPU() {
+		return freeCPU;
+	}
+
+	public double getFreeMem() {
+		return freeMem;
+	}
 }
