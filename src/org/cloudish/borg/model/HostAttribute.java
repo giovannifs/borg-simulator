@@ -2,22 +2,19 @@ package org.cloudish.borg.model;
 
 public class HostAttribute {
 
-	String attName;
-	String attValue;
-	boolean isNumericAttr;
+	private String attName;
+	private String attValue;
 	
 	public HostAttribute(String attName, String attValue) {
 		this.attName = attName;
 		this.attValue = attValue;
-		try {
-			Double.parseDouble(attValue);
-			isNumericAttr = true;
-		} catch (Exception e) {
-			isNumericAttr = true; 
-		}
 	}
 
 	public boolean match(TaskConstraint constraint) {
+		if (!attName.equals(constraint.getAttName())) {
+			return false;
+		}
+		
 		switch (constraint.getOperator()) {
 		case "!=":
 			
@@ -38,23 +35,26 @@ public class HostAttribute {
 			try {
 				return Integer.valueOf(attValue) < Integer.valueOf(constraint.getAttValue());
 			} catch (Exception e) {
-				return constraint.getAttValue().compareTo(attValue) == -1;
+				return attValue.compareTo(constraint.getAttValue()) == -1;
 			}
 			
 		case ">":
 			try {
 				return Integer.valueOf(attValue) > Integer.valueOf(constraint.getAttValue());
 			} catch (Exception e) {
-				return constraint.getAttValue().compareTo(attValue) == 1;
+				return attValue.compareTo(constraint.getAttValue()) == 1;
 			}
 			
 		default:
-			System.err.println("Constraint with invalid operator.");
-			System.exit(1);
-			break;
+			throw new IllegalArgumentException("Constraint with invalid operator.");
 		} 
-		
-		return false;
 	}
 
+	public String getAttName() {
+		return attName;
+	}
+
+	public String getAttValue() {
+		return attValue;
+	}
 }
