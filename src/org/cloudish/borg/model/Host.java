@@ -19,7 +19,6 @@ public class Host {
 	//	#%% Format: {host_id,host_name,cpu_capacity,mem_capacity,rs,0/,Ql,maq}
 	//	#{0,"Host_1",8,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
 	//	5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]
-
 	public Host(String line) {
 		StringTokenizer st = new StringTokenizer(line, "[");
 
@@ -27,7 +26,6 @@ public class Host {
 		
 		//creating constraints
 		String attributesStr = st.nextToken();		
-		attributesStr = attributesStr.replace("]", "").trim();
 		
 		st = new StringTokenizer(properties, ",");
 		id = Long.parseLong(st.nextToken());
@@ -47,6 +45,16 @@ public class Host {
 				attributes.put(attName, new HostAttribute(attName, attValue));
 			}
 		}
+	}
+	
+	private Host(long id, double cpuCapacity, double freeCPU, double memCapacity, double freeMem,
+			Map<String, HostAttribute> attributes) {
+		this.id = id;
+		this.cpuCapacity = cpuCapacity;
+		this.freeCPU = freeCPU;
+		this.memCapacity = memCapacity;
+		this.freeMem = freeMem;
+		this.attributes = attributes;
 	}
 
 	public double getScore(Task task) {
@@ -109,5 +117,9 @@ public class Host {
 
 	public Map<String, HostAttribute> getAttributes() {
 		return attributes;
+	}
+	
+	public Host clone() {
+		return new Host(getId(), getCpuCapacity(),getFreeCPU(), getMemCapacity(), getFreeMem(), getAttributes());
 	}
 }

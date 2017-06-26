@@ -38,14 +38,11 @@ public class Task {
 			throw new IllegalArgumentException("Task attributes must no be negative values.");
 		}
 		
-		System.out.println("Constraint: " + constraintStr);
-		
 		if (constraintStr.length() > 0) {
 			StringTokenizer stConst = new StringTokenizer(constraintStr, ";");		
 			while (stConst.hasMoreTokens()) {
 				st = new StringTokenizer(stConst.nextToken(), ",");
 				String attName = st.nextToken();
-				System.out.println(attName);
 				String op = st.nextToken();
 				String attValue = st.nextToken();
 				constraints.add(new TaskConstraint(attName, op, attValue));

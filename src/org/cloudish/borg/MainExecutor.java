@@ -1,9 +1,15 @@
 package org.cloudish.borg;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.Task;
@@ -11,100 +17,143 @@ import org.cloudish.borg.model.Task;
 public class MainExecutor {
 	
 	public static void main(String[] args) throws IOException {
+	
+		Properties properties = new Properties();
+		
+		FileInputStream input = new FileInputStream(args[0]);
+		properties.load(input);
 		
 		long startTime = System.currentTimeMillis();
 		
-		String infraFilePath = args[0];		
-		String workloadFilePath = args[1];
+		String infraFilePath = properties.getProperty("infra_file_path");		
+		String workloadFilePath = properties.getProperty("workload_file_path");
+		double admittedPendingFraction = Double.parseDouble(properties.getProperty("admited_pending_fraction"));
 		
-		List<Host> hosts = createHosts(infraFilePath);
-//		List<Task> tasks = createTasks(workloadFilePath);
+		String outputDir = properties.getProperty("output_dir");
 		
-		List<Task> pendingQueue = new ArrayList<Task>();
+		File outputDirFile = new File(outputDir);
+		if (!outputDirFile.exists() || !outputDirFile.isDirectory()) {
+			outputDirFile.mkdir();
+		}
 		
-		int index = 0;
-		// allocating tasks
+		List<Host> hosts = createHosts(infraFilePath);		
+		
+		int min = 0;
+		int max = hosts.size();
+		
+		while(max != min) {
+			int mid = (int)((min + max)/2);
+			
+			// chosen first mid hosts
+			List<Host> chosenHosts = getFirstHosts(hosts, mid);
+			
+			System.out.println("hosts="+chosenHosts.size());
+			
+			List<Task> pendingQueue = new ArrayList<Task>();
+			
+			long numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
+			double pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
+			
+			saveHostInfo(properties, chosenHosts);
+			savePendingQueueInfo(properties, chosenHosts, pendingQueue);
+			
+			System.out.println("pending-queue-tasks=" + pendingQueue.size());
+			System.out.println("pending-queue-fraction=" + pendingQueueFraction);
+			
+			// checking pending queue fraction
+			if (pendingQueueFraction > admittedPendingFraction) {
+				min = mid;
+			} else {
+				max = mid;
+			}
+		}	
+		
+		long now = System.currentTimeMillis();		
+		System.out.println("execution time: " + (now - startTime) + " milliseconds.");
+	}
+
+	private static List<Host> getFirstHosts(List<Host> hosts, int mid) {
+		List<Host> firstHosts = new ArrayList<>();
+		for (int i = 0; i < mid; i++) {
+			firstHosts.add(hosts.get(i).clone());
+		}
+		return firstHosts;
+	}
+
+	private static void savePendingQueueInfo(Properties properties, List<Host> chosenHosts, List<Task> pendingQueue)
+			throws FileNotFoundException, UnsupportedEncodingException {
+		PrintWriter writer = new PrintWriter(
+				properties.getProperty("output_dir") + "/pending-queue-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
+		writer.println("tid,jid");
+		for (Task task : pendingQueue) {
+			writer.println(task.getTid() + "," + task.getJid());
+		}
+		writer.close();
+	}
+
+	private static long allocateTasks(String workloadFilePath, List<Host> chosenHosts, List<Task> pendingQueue)
+			throws FileNotFoundException, IOException {
+
+		long startAllocation = System.currentTimeMillis();
+		
+		System.out.println("Allocating tasks into " + chosenHosts.size() + " hosts.");
+		
+		int taskIndex = 0;
 		
 		BufferedReader br = new BufferedReader(new FileReader(workloadFilePath));
 		try {
-		    String line = br.readLine();
-
-		    while (line != null) {
-		    	Task task = new Task(line);
-
-//		    	for (Task task : tasks) {
-		    		System.out.println("Task index:" + index);
-		    		double bestScore = -1;
-		    		Host bestHost = null;
-		    		
-		    		for (Host host : hosts) {
-		    			double score = host.getScore(task);
-		    			if (score > bestScore) {
-		    				bestScore = score;
-		    				bestHost = host;
-		    			}
-		    		}
-		    		
-		    		if (bestScore >= 0 && bestHost != null){
-		    			System.out.println("Task " + index+ " allocated.");
-		    			bestHost.allocate(task);
-		    		} else {
-		    			System.out.println("Task " + index + " pending");
-		    			pendingQueue.add(task);
-		    		}
-		    		index++;
-//		    	}
-		    	line = br.readLine();
-		    }
+			String line = br.readLine();
+			
+			while (line != null) {
+				Task task = new Task(line);
+				
+				System.out.println("Task index:" + taskIndex);
+				double bestScore = -1;
+				Host bestHost = null;
+				
+				for (Host host : chosenHosts) {
+					double score = host.getScore(task);
+					if (score > bestScore) {
+						bestScore = score;
+						bestHost = host;
+					}
+				}
+				
+				if (bestScore >= 0 && bestHost != null) {
+					System.out.println("Task " + taskIndex + " allocated.");
+					bestHost.allocate(task);
+				} else {
+					System.out.println("Task " + taskIndex + " goes to pending queue.");
+					pendingQueue.add(task);
+				}
+				taskIndex++;
+				line = br.readLine();
+			}
 		} finally {
-		    br.close();
-		}
-		
-		System.out.println("pending-queue=" + pendingQueue.size());
-		
-		// generating host outputs
-		for (Host host : hosts) {
-			System.out.println(host.getId() + "," + host.getCpuCapacity() + "," + host.getFreeCPU() + ","
-					+ host.getMemCapacity() + "," + host.getFreeMem());
+			br.close();
 		}
 		
 		long now = System.currentTimeMillis();
 		
-		System.out.println("execution time: " + (now - startTime) + " milliseconds.");
+		System.out.println("Allocation execution time for " + chosenHosts.size() + " hosts is "
+				+ (now - startAllocation) + " miliseconds.");
+		
+		return taskIndex;
 	}
 
-//	#%% format {timestamp,task_id,job_id,cpu_req,mem_req,priority,constraints}
-//	#{1,0,1,2,2,0,[{"rs", "==", "1"}, {"o/", "/=", "1"}]}.
-//	#{1,1,1,4,2,0,[{"rs", "==", "1"}, {"o/", "/=", "0"}]}.
-//	#{1,2,1,2,4,0,[{"rs", "==", "1"}, {"o/", "/=", "0"}]}.
-//	#{0,0,3418309,0.125,0.07446,9, []}.
-	private static List<Task> createTasks(String workloadFilePath) throws IOException {
-		List<Task> tasks = new ArrayList<Task>();
-		
-		BufferedReader br = new BufferedReader(new FileReader(workloadFilePath));
-		try {
-//		    StringBuilder sb = new StringBuilder();
-		    String line = br.readLine();
-
-		    while (line != null) {
-		    	tasks.add(new Task(line));
-//		        sb.append(line);
-//		        sb.append(System.lineSeparator());
-		        line = br.readLine();
-		    }
-//		    String everything = sb.toString();
-		} finally {
-		    br.close();
+	private static void saveHostInfo(Properties properties, List<Host> chosenHosts)
+			throws FileNotFoundException, UnsupportedEncodingException {
+		// generating host outputs
+		PrintWriter writer = new PrintWriter(
+				properties.getProperty("output_dir") + "/allocation-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
+		writer.println("hostId,cpuCapacity,freeCpu,memCapacity,freeMem");
+		for (Host host : chosenHosts) {
+			writer.println(host.getId() + "," + host.getCpuCapacity() + "," + host.getFreeCPU() + ","
+					+ host.getMemCapacity() + "," + host.getFreeMem());
 		}
-		
-		return tasks;
+		writer.close();
 	}
 
-//	#%% Format: {host_id,host_name,cpu_capacity,mem_capacity,rs,0/,Ql,maq}
-//	#{0,"Host_1",8,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
-//	#{1,"Host_2",16,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
-
-	
 	private static List<Host> createHosts(String infraFilePath) throws IOException {
 		List<Host> hosts = new ArrayList<Host>();
 		
@@ -120,5 +169,4 @@ public class MainExecutor {
 		}
 		return hosts;
 	}
-
 }
