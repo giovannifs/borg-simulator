@@ -13,8 +13,8 @@ public class Host {
 	double memCapacity;
 	double freeCPU;
 	double freeMem;
-	Map<String, HostAttribute> attributes = new HashMap<>();
-	List<Double> jidAllocated = new ArrayList<>();
+	private Map<String, HostAttribute> attributes = new HashMap<>();
+	private List<Long> jidAllocated = new ArrayList<>();
 
 	//	#%% Format: {host_id,host_name,cpu_capacity,mem_capacity,rs,0/,Ql,maq}
 	//	#{0,"Host_1",8,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
@@ -43,12 +43,10 @@ public class Host {
 			while (stConst.hasMoreTokens()) {
 				st = new StringTokenizer(stConst.nextToken(), ",");
 				String attName = st.nextToken();
-				System.out.println(attName);
 				String attValue = st.nextToken();
 				attributes.put(attName, new HostAttribute(attName, attValue));
 			}
 		}
-		
 	}
 
 	public double getScore(Task task) {
@@ -64,7 +62,7 @@ public class Host {
 		}
     }
 
-	private boolean match(Task task) {
+	protected boolean match(Task task) {
 		if (jidAllocated.contains(task.getJid())) {
 			return false;
 		}
@@ -107,5 +105,9 @@ public class Host {
 
 	public double getFreeMem() {
 		return freeMem;
+	}
+
+	public Map<String, HostAttribute> getAttributes() {
+		return attributes;
 	}
 }

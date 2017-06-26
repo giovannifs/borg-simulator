@@ -18,33 +18,46 @@ public class MainExecutor {
 		String workloadFilePath = args[1];
 		
 		List<Host> hosts = createHosts(infraFilePath);
-		List<Task> tasks = createTasks(workloadFilePath);
+//		List<Task> tasks = createTasks(workloadFilePath);
 		
 		List<Task> pendingQueue = new ArrayList<Task>();
 		
 		int index = 0;
 		// allocating tasks
-		for (Task task : tasks) {
-			System.out.println("Task index:" + index);
-			double bestScore = -1;
-			Host bestHost = null;
-			
-			for (Host host : hosts) {
-				double score = host.getScore(task);
-				if (score > bestScore) {
-					bestScore = score;
-					bestHost = host;
-				}
-			}
-			
-			if (bestScore >= 0 && bestHost != null){
-				System.out.println("Task " + index+ " allocated.");
-				bestHost.allocate(task);
-			} else {
-				System.out.println("Task " + index + " pending");
-				pendingQueue.add(task);
-			}
-			index++;
+		
+		BufferedReader br = new BufferedReader(new FileReader(workloadFilePath));
+		try {
+		    String line = br.readLine();
+
+		    while (line != null) {
+		    	Task task = new Task(line);
+
+//		    	for (Task task : tasks) {
+		    		System.out.println("Task index:" + index);
+		    		double bestScore = -1;
+		    		Host bestHost = null;
+		    		
+		    		for (Host host : hosts) {
+		    			double score = host.getScore(task);
+		    			if (score > bestScore) {
+		    				bestScore = score;
+		    				bestHost = host;
+		    			}
+		    		}
+		    		
+		    		if (bestScore >= 0 && bestHost != null){
+		    			System.out.println("Task " + index+ " allocated.");
+		    			bestHost.allocate(task);
+		    		} else {
+		    			System.out.println("Task " + index + " pending");
+		    			pendingQueue.add(task);
+		    		}
+		    		index++;
+//		    	}
+		    	line = br.readLine();
+		    }
+		} finally {
+		    br.close();
 		}
 		
 		System.out.println("pending-queue=" + pendingQueue.size());

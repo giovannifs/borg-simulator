@@ -23,4 +23,16 @@ public class TaskConstraint {
 	public String getAttValue() {
 		return attValue;
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof TaskConstraint) {
+			TaskConstraint other = (TaskConstraint) obj;
+
+			return getAttName().equals(other.getAttName()) && getOperator().equals(other.getOperator())
+					&& getAttValue().equals(other.getAttValue());
+
+		}
+		return false;
+	}
 }

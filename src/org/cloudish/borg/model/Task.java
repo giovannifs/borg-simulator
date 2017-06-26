@@ -6,13 +6,13 @@ import java.util.StringTokenizer;
 
 public class Task {
 
-	long jid;
-	int tid;
-	double cpuReq;
-	double memReq;
-	int priority;
-	boolean antiAffinity;
-	List<TaskConstraint> constraints = new ArrayList<TaskConstraint>();
+	private long jid;
+	private int tid;
+	private double cpuReq;
+	private double memReq;
+	private int priority;
+	private boolean antiAffinity;
+	private List<TaskConstraint> constraints = new ArrayList<TaskConstraint>();
 	
 //	#%% format {timestamp,task_id,job_id,cpu_req,mem_req,priority,diffMachine,constraints}
 //	0,0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]
@@ -34,6 +34,10 @@ public class Task {
 		priority = Integer.parseInt(st.nextToken().trim());
 		antiAffinity = Integer.parseInt(st.nextToken().trim()) == 1;
 		
+		if (tid < 0 || jid < 0 || cpuReq < 0 || memReq < 0 || priority < 0) {
+			throw new IllegalArgumentException("Task attributes must no be negative values.");
+		}
+		
 		System.out.println("Constraint: " + constraintStr);
 		
 		if (constraintStr.length() > 0) {
@@ -49,7 +53,7 @@ public class Task {
 		}
 	}
 
-	public double getJid() {
+	public long getJid() {
 		return jid;
 	}
 
@@ -71,5 +75,9 @@ public class Task {
 
 	public List<TaskConstraint> getConstraints() {
 		return constraints;
+	}
+
+	public int getPriority() {
+		return priority;
 	}
 }
