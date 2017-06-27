@@ -42,6 +42,22 @@ public class MainExecutor {
 		
 		List<Host> hosts = createHosts(infraFilePath);		
 		
+		// allocating in all hosts - without cluster compaction
+		System.out.println("Allocating considering all " + hosts.size() + " hosts...");
+		List<Host> chosenHosts = getFirstHosts(hosts, hosts.size());
+		List<Task> pendingQueue = new ArrayList<Task>();
+		
+		long numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
+		double pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
+		
+		saveHostInfo(outputDir, chosenHosts);
+		savePendingQueueInfo(outputDir, chosenHosts, pendingQueue);
+		
+		System.out.println("hosts=" + chosenHosts.size());
+		System.out.println("pending-queue-tasks=" + pendingQueue.size());
+		System.out.println("pending-queue-fraction=" + pendingQueueFraction);
+		
+		
 		int permutation = 1;
 		while (permutation <= numberOfPermutations) {
 			// creating output directory
@@ -50,7 +66,7 @@ public class MainExecutor {
 			
 			// saving host permutation
 			saveHostPermutation(permutationOutDir, hosts);
-						
+			
 			int permutationIndex = 1;
 			
 			int min = 0;
@@ -63,14 +79,14 @@ public class MainExecutor {
 				System.out.println("Executing scenario " + permutation + " round " + permutationIndex++);
 				
 				// chosen first mid hosts
-				List<Host> chosenHosts = getFirstHosts(hosts, mid);
+				chosenHosts = getFirstHosts(hosts, mid);
 				
-				System.out.println("scenario " + permutation + " round " + permutationIndex+ " - hosts= + "+chosenHosts.size());
+				System.out.println("scenario " + permutation + " round " + permutationIndex+ " - hosts="+chosenHosts.size());
 				
-				List<Task> pendingQueue = new ArrayList<Task>();
+				pendingQueue = new ArrayList<Task>();
 				
-				long numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
-				double pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
+				numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
+				pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
 				
 				saveHostInfo(permutationOutDir, chosenHosts);
 				savePendingQueueInfo(permutationOutDir, chosenHosts, pendingQueue);

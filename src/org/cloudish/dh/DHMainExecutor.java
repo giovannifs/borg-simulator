@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -25,49 +24,56 @@ public class DHMainExecutor {
 		
 		String infraFilePath = properties.getProperty("infra_file_path");		
 		String workloadFilePath = properties.getProperty("workload_file_path");
-				
+
 		String outputDir = properties.getProperty("output_dir");
 		createOutputDir(outputDir);
 		
 		List<ResourcePool> resourcePools = createResourcePools(infraFilePath);
 		
-		DHManeger dhManager = new DHManeger(resourcePools);
+		DHManager dhManager = new DHManager(properties, resourcePools);
 		
+		// adding first logical server to DH infra
 		LogicalServer firstServer = dhManager.createLogicalServer(null);
-		List<LogicalServer> logicalServers = new ArrayList<>();
-		logicalServers.add(firstServer);
-		
-		List<Task> pendingQueue = new ArrayList<>();
-		
-		// allocating the tasks		
+		dhManager.addLogicalServer(firstServer);
+				
+		// allocating the tasks
 		int numberOfTasks = 0;
 		
 		BufferedReader br = new BufferedReader(new FileReader(workloadFilePath));
 		try {
 			String line = br.readLine();
-			
+
 			while (line != null) {
 				Task task = new Task(line);
+
+				System.out.println("Task index:" + ++numberOfTasks);
+
+				boolean result = dhManager.allocate(task);
 				
-				System.out.println("Task index:" + numberOfTasks);
-				
-				for (LogicalServer lServer : logicalServers) {
-					
+				if (result) {
+					System.out.println("Task " + numberOfTasks + " allocated.");
+				} else {
+					System.out.println("Task " + numberOfTasks + " went to pending queue.");
 				}
-				
-				numberOfTasks++;
+
 				line = br.readLine();
 			}
 		} finally {
 			br.close();
 		}
+		
+		// checking minimum logical server constraint
+		if (!dhManager.hasMinimumLogicalServer()) {
+			// create amount of minimum logical server
+			dhManager.createMinimumLogicalServer();
+		}		
 				
-		double pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
+		double pendingQueueFraction = new Double(dhManager.getPendingQueue().size())/new Double(numberOfTasks);
 
 		// saveHostInfo(properties, chosenHosts);
 		// savePendingQueueInfo(properties, chosenHosts, pendingQueue);
 
-		System.out.println("pending-queue-tasks=" + pendingQueue.size());
+		System.out.println("pending-queue-tasks=" + dhManager.getPendingQueue().size());
 		System.out.println("pending-queue-fraction=" + pendingQueueFraction);
 	
 		long now = System.currentTimeMillis();		
