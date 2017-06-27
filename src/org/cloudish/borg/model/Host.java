@@ -62,11 +62,11 @@ public class Host {
 	}
 	
 	public Host(long id, double cpuCapacity, double memCapacity,
-			Map<String, ResourceAttribute> attributes) {
-		this(id, cpuCapacity, cpuCapacity, memCapacity, memCapacity, attributes);
+			RankingScore rankingScore, Map<String, ResourceAttribute> attributes) {
+		this(id, cpuCapacity, cpuCapacity, memCapacity, memCapacity, rankingScore, attributes);
 	}
 	
-	private Host(long id, double cpuCapacity, double freeCPU, double memCapacity, double freeMem,
+	private Host(long id, double cpuCapacity, double freeCPU, double memCapacity, double freeMem, RankingScore rankingScore,
 			Map<String, ResourceAttribute> attributes) {
 		this.id = id;
 		this.cpuCapacity = cpuCapacity;
@@ -74,6 +74,7 @@ public class Host {
 		this.memCapacity = memCapacity;
 		this.freeMem = freeMem;
 		this.attributes = attributes;
+		this.rankingScore = rankingScore;
 	}
 
 	public double getScore(Task task) {
@@ -142,7 +143,12 @@ public class Host {
 		return attributes;
 	}
 	
+	public RankingScore getRankingScore() {
+		return rankingScore;
+	}
+
 	public Host clone() {
-		return new Host(getId(), getCpuCapacity(),getFreeCPU(), getMemCapacity(), getFreeMem(), getAttributes());
+		return new Host(getId(), getCpuCapacity(), getFreeCPU(), getMemCapacity(), getFreeMem(), getRankingScore(),
+				getAttributes());
 	}
 }

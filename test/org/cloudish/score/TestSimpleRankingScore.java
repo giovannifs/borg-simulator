@@ -23,7 +23,7 @@ public class TestSimpleRankingScore {
 	public void testCalculateScore() {
 		SimpleRankingScore score = new SimpleRankingScore();
 
-		Host h = new Host(0, 0.4, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.4, 0.5, null, new HashMap<>());
 		Assert.assertEquals(0.9, score.calculateScore(null, h), ACCEPTABLE_DIFF);
 	}
 	
@@ -31,7 +31,7 @@ public class TestSimpleRankingScore {
 	public void testCalculateScore2() {
 		SimpleRankingScore score = new SimpleRankingScore();
 
-		Host h = new Host(0, 0.4, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.4, 0.5, null, new HashMap<>());
 		Task t = new Task(0, 10, 0.2, 0.2, 11, true, new ArrayList<>());
 		h.allocate(t);
 		
@@ -42,7 +42,7 @@ public class TestSimpleRankingScore {
 	public void testCalculateScore3() {
 		SimpleRankingScore score = new SimpleRankingScore();
 
-		Host h = new Host(0, 1, 0.1, new HashMap<>());
+		Host h = new Host(0, 1, 0.1, null, new HashMap<>());
 		Task t = new Task(0, 10, 0.2, 0.1, 11, true, new ArrayList<>());
 		h.allocate(t);
 		

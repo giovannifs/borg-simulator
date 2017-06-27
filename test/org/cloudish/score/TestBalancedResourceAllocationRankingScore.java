@@ -23,7 +23,7 @@ public class TestBalancedResourceAllocationRankingScore {
 	public void testCalculateScore() {
 		BalancedResourceAllocationRankingScore score = new BalancedResourceAllocationRankingScore();
 
-		Host h = new Host(0, 0.5, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.5, 0.5, null, new HashMap<>());
 		Assert.assertEquals(10, score.calculateScore(null, h), ACCEPTABLE_DIFF);
 	}
 	
@@ -31,7 +31,7 @@ public class TestBalancedResourceAllocationRankingScore {
 	public void testCalculateScore2() {
 		BalancedResourceAllocationRankingScore score = new BalancedResourceAllocationRankingScore();
 
-		Host h = new Host(0, 0.5, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.5, 0.5, null, new HashMap<>());
 		h.allocate(new Task(0, 10, 0.5, 0, 11, true, new ArrayList<>()));
 		
 		Assert.assertEquals(0, score.calculateScore(null, h), ACCEPTABLE_DIFF);
@@ -41,7 +41,7 @@ public class TestBalancedResourceAllocationRankingScore {
 	public void testCalculateScore3() {
 		BalancedResourceAllocationRankingScore score = new BalancedResourceAllocationRankingScore();
 
-		Host h = new Host(0, 0.5, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.5, 0.5, null, new HashMap<>());
 		h.allocate(new Task(0, 10, 0.3, 0.1, 11, true, new ArrayList<>()));
 		
 		Assert.assertEquals(6, score.calculateScore(null, h), ACCEPTABLE_DIFF);

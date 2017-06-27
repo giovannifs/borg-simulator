@@ -24,7 +24,7 @@ public class TestKubernetesRankingScore {
 		KubernetesRankingScore score = new KubernetesRankingScore();
 
 		
-		Host h = new Host(0, 0.5, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.5, 0.5, null, new HashMap<>());
 		Assert.assertEquals(20, score.calculateScore(null, h), ACCEPTABLE_DIFF);
 	}
 	
@@ -32,7 +32,7 @@ public class TestKubernetesRankingScore {
 	public void testCalculateScore2() {
 		KubernetesRankingScore score = new KubernetesRankingScore();
 		
-		Host h = new Host(0, 0.5, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.5, 0.5, null, new HashMap<>());
 		h.allocate(new Task(0, 10, 0.3, 0.1, 11, true, new ArrayList<>()));
 		// balancedResource score is 6
 		// leastRequestes score is 6
@@ -44,7 +44,7 @@ public class TestKubernetesRankingScore {
 	public void testCalculateScore3() {
 		KubernetesRankingScore score = new KubernetesRankingScore();
 
-		Host h = new Host(0, 0.5, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.5, 0.5, null, new HashMap<>());
 		h.allocate(new Task(0, 10, 0.3, 0.3, 11, true, new ArrayList<>()));
 		// balancedResource score is 10
 		// leastRequestes score is 4
@@ -56,7 +56,7 @@ public class TestKubernetesRankingScore {
 	public void testCalculateScore4() {
 		KubernetesRankingScore score = new KubernetesRankingScore();
 
-		Host h = new Host(0, 0.5, 0.5, new HashMap<>());
+		Host h = new Host(0, 0.5, 0.5, null, new HashMap<>());
 		h.allocate(new Task(0, 10, 0.5, 0.5, 11, true, new ArrayList<>()));
 		// balancedResource score is 0
 		// leastRequestes score is 0
