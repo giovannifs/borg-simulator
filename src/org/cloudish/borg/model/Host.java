@@ -51,6 +51,11 @@ public class Host {
 		}
 	}
 	
+	public Host(long id, double cpuCapacity, double memCapacity,
+			Map<String, ResourceAttribute> attributes) {
+		this(id, cpuCapacity, cpuCapacity, memCapacity, memCapacity, attributes);
+	}
+	
 	private Host(long id, double cpuCapacity, double freeCPU, double memCapacity, double freeMem,
 			Map<String, ResourceAttribute> attributes) {
 		this.id = id;

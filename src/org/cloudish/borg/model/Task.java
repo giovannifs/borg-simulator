@@ -49,6 +49,24 @@ public class Task {
 			}
 		}
 	}
+	
+	public Task(int tid, long jid, double cpuReq, double memReq, int priority, boolean antiAffinity,
+			List<TaskConstraint> constraints) {
+		
+		if (tid < 0 || jid < 0 || cpuReq < 0 || memReq < 0 || priority < 0) {
+			throw new IllegalArgumentException("Task attributes must no be negative values.");
+		} else if (constraints == null) {
+			throw new IllegalArgumentException("Task constraint attribute must no be null.");
+		}
+		
+		this.tid = tid;
+		this.jid = jid;
+		this.cpuReq = cpuReq;
+		this.memReq = memReq;
+		this.priority = priority;
+		this.antiAffinity = antiAffinity;
+		this.constraints = constraints;
+	}
 
 	public long getJid() {
 		return jid;

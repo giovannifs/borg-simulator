@@ -7,6 +7,9 @@ public class SimpleRankingScore implements RankingScore {
 
 	@Override
 	public double calculateScore(Task task, Host host) {
+		if (host == null) {
+			throw new IllegalArgumentException("Host must not be null.");
+		}
 		return host.getFreeCPU() + host.getFreeMem();
 	}
 
