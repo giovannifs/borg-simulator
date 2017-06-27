@@ -8,8 +8,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 
 import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.Task;
@@ -30,46 +32,88 @@ public class MainExecutor {
 		double admittedPendingFraction = Double.parseDouble(properties.getProperty("admited_pending_fraction"));
 		
 		String outputDir = properties.getProperty("output_dir");
+		checkAndCreateDir(outputDir);
 		
-		File outputDirFile = new File(outputDir);
-		if (!outputDirFile.exists() || !outputDirFile.isDirectory()) {
-			outputDirFile.mkdir();
+		int numberOfPermutations = Integer.parseInt(properties.getProperty("number_of_host_permutations"));
+		
+		if (numberOfPermutations < 1) {
+			throw new IllegalArgumentException("number_of_host_permutations property must be a positive value.");
 		}
 		
 		List<Host> hosts = createHosts(infraFilePath);		
 		
-		int min = 0;
-		int max = hosts.size();
-		
-		while(max != min) {
+		int permutation = 1;
+		while (permutation <= numberOfPermutations) {
+			// creating output directory
+			String permutationOutDir = outputDir + "/host_permutation_" + permutation;
+			checkAndCreateDir(permutationOutDir);
+			
+			// saving host permutation
+			saveHostPermutation(permutationOutDir, hosts);
+						
+			int permutationIndex = 1;
+			
+			int min = 0;
+			int max = hosts.size();
 			int mid = (int)((min + max)/2);
 			
-			// chosen first mid hosts
-			List<Host> chosenHosts = getFirstHosts(hosts, mid);
+			List<Integer> previousMids = new ArrayList<>();
 			
-			System.out.println("hosts="+chosenHosts.size());
-			
-			List<Task> pendingQueue = new ArrayList<Task>();
-			
-			long numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
-			double pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
-			
-			saveHostInfo(properties, chosenHosts);
-			savePendingQueueInfo(properties, chosenHosts, pendingQueue);
-			
-			System.out.println("pending-queue-tasks=" + pendingQueue.size());
-			System.out.println("pending-queue-fraction=" + pendingQueueFraction);
-			
-			// checking pending queue fraction
-			if (pendingQueueFraction > admittedPendingFraction) {
-				min = mid;
-			} else {
-				max = mid;
+			while(!previousMids.contains(mid)) {
+				System.out.println("Executing scenario " + permutation + " round " + permutationIndex++);
+				
+				// chosen first mid hosts
+				List<Host> chosenHosts = getFirstHosts(hosts, mid);
+				
+				System.out.println("scenario " + permutation + " round " + permutationIndex+ " - hosts= + "+chosenHosts.size());
+				
+				List<Task> pendingQueue = new ArrayList<Task>();
+				
+				long numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
+				double pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
+				
+				saveHostInfo(permutationOutDir, chosenHosts);
+				savePendingQueueInfo(permutationOutDir, chosenHosts, pendingQueue);
+				
+				System.out.println("scenario " + permutation + " round " + permutationIndex+ " - pending-queue-tasks=" + pendingQueue.size());
+				System.out.println("scenario " + permutation + " round " + permutationIndex+ " - pending-queue-fraction=" + pendingQueueFraction);
+				
+				// checking pending queue fraction
+				if (pendingQueueFraction > admittedPendingFraction) {
+					min = mid;
+				} else {
+					max = mid;
+				}
+				
+				// updating variables
+				previousMids.add(mid);
+				mid = (int)((min + max)/2);
 			}
-		}	
+			
+			// shuffle hosts
+			Collections.shuffle(hosts);
+			permutation++;			
+		}		
 		
 		long now = System.currentTimeMillis();		
 		System.out.println("execution time: " + (now - startTime) + " milliseconds.");
+	}
+
+	private static String checkAndCreateDir(String dir) {
+		File permutationOutDirFile = new File(dir);
+		if (!permutationOutDirFile.exists() || !permutationOutDirFile.isDirectory()) {
+			permutationOutDirFile.mkdir();
+		}
+		return dir;
+	}
+
+	private static void saveHostPermutation(String permutationOutDir, List<Host> hosts)
+			throws FileNotFoundException, UnsupportedEncodingException {
+		PrintWriter writer = new PrintWriter(permutationOutDir + "/host-permutation.csv", "UTF-8");
+		for (Host host : hosts) {
+			writer.println(host.getHostLine());
+		}
+		writer.close();
 	}
 
 	private static List<Host> getFirstHosts(List<Host> hosts, int mid) {
@@ -80,10 +124,10 @@ public class MainExecutor {
 		return firstHosts;
 	}
 
-	private static void savePendingQueueInfo(Properties properties, List<Host> chosenHosts, List<Task> pendingQueue)
+	private static void savePendingQueueInfo(String outputDir, List<Host> chosenHosts, List<Task> pendingQueue)
 			throws FileNotFoundException, UnsupportedEncodingException {
 		PrintWriter writer = new PrintWriter(
-				properties.getProperty("output_dir") + "/pending-queue-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
+				outputDir + "/pending-queue-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
 		writer.println("tid,jid");
 		for (Task task : pendingQueue) {
 			writer.println(task.getTid() + "," + task.getJid());
@@ -109,22 +153,30 @@ public class MainExecutor {
 				
 				System.out.println("Task index:" + taskIndex);
 				double bestScore = -1;
-				Host bestHost = null;
+				List<Host> bestHosts = new ArrayList<>();
 				
 				for (Host host : chosenHosts) {
 					double score = host.getScore(task);
 					if (score > bestScore) {
 						bestScore = score;
-						bestHost = host;
+						bestHosts.clear();
+						bestHosts.add(host);
+					} else if (score == bestScore) {
+						bestHosts.add(host);
 					}
 				}
-				
-				if (bestScore >= 0 && bestHost != null) {
-					System.out.println("Task " + taskIndex + " allocated.");
+								
+				if (bestScore >= 0 && !bestHosts.isEmpty()) {
+					Random r = new Random();
+
+					// choosing a random host inside of best hosts list
+					Host bestHost = bestHosts.get(r.nextInt(bestHosts.size()));
 					bestHost.allocate(task);
+					
+					System.out.println("Task " + taskIndex + " allocated.");
 				} else {
-					System.out.println("Task " + taskIndex + " goes to pending queue.");
 					pendingQueue.add(task);
+					System.out.println("Task " + taskIndex + " went to pending queue.");
 				}
 				taskIndex++;
 				line = br.readLine();
@@ -141,11 +193,10 @@ public class MainExecutor {
 		return taskIndex;
 	}
 
-	private static void saveHostInfo(Properties properties, List<Host> chosenHosts)
+	private static void saveHostInfo(String outputDir, List<Host> chosenHosts)
 			throws FileNotFoundException, UnsupportedEncodingException {
 		// generating host outputs
-		PrintWriter writer = new PrintWriter(
-				properties.getProperty("output_dir") + "/allocation-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
+		PrintWriter writer = new PrintWriter(outputDir + "/allocation-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
 		writer.println("hostId,cpuCapacity,freeCpu,memCapacity,freeMem");
 		for (Host host : chosenHosts) {
 			writer.println(host.getId() + "," + host.getCpuCapacity() + "," + host.getFreeCPU() + ","

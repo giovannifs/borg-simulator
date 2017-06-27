@@ -6,30 +6,38 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import org.cloudish.score.KubernetesRankingScore;
 import org.cloudish.score.RankingScore;
-import org.cloudish.score.SimpleRankingScore;
 
 public class Host {
 
-	long id;
-	double cpuCapacity;
-	double memCapacity;
-	double freeCPU;
-	double freeMem;
+	private long id;
+	private double cpuCapacity;
+	private double memCapacity;
+	private double freeCPU;
+	private double freeMem;
+	private String hostLine;
 	private Map<String, ResourceAttribute> attributes = new HashMap<>();
 	private List<Long> jidAllocated = new ArrayList<>();
-	private RankingScore scoring = new SimpleRankingScore();
+	private RankingScore rankingScore;
 
+	public Host(String line) {
+		this(line, new KubernetesRankingScore());
+	}
+	
 	//	#%% Format: {host_id,host_name,cpu_capacity,mem_capacity,rs,0/,Ql,maq}
 	//	#{0,"Host_1",8,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
 	//	5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]
-	public Host(String line) {
+	public Host(String line, RankingScore rankingScore) {
+		this.hostLine = line;
+		
 		StringTokenizer st = new StringTokenizer(line, "[");
 
 		String properties = st.nextToken();
 		
 		//creating constraints
-		String attributesStr = st.nextToken();		
+		String attributesStr = st.nextToken();
+		attributesStr = attributesStr.replace("]", "").trim();
 		
 		st = new StringTokenizer(properties, ",");
 		id = Long.parseLong(st.nextToken());
@@ -39,6 +47,8 @@ public class Host {
 		
 		freeCPU = cpuCapacity;
 		freeMem = memCapacity;
+		
+		this.rankingScore = rankingScore;
 
 		if (attributesStr.length() > 0) {
 			StringTokenizer stConst = new StringTokenizer(attributesStr, ";");		
@@ -73,7 +83,7 @@ public class Host {
 
 		// checking capacities and calculating score
 		if (freeCPU >= task.getCpuReq() && freeMem >= task.getMemReq()) {
-			return scoring.calculateScore(task, this);
+			return rankingScore.calculateScore(task, this);
 		} else {
 			return -1;
 		}
@@ -122,6 +132,10 @@ public class Host {
 
 	public double getFreeMem() {
 		return freeMem;
+	}
+	
+	public String getHostLine() {
+		return hostLine;
 	}
 
 	public Map<String, ResourceAttribute> getAttributes() {
