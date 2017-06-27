@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import org.cloudish.score.RankingScore;
+import org.cloudish.score.SimpleRankingScore;
+
 public class Host {
 
 	long id;
@@ -13,8 +16,9 @@ public class Host {
 	double memCapacity;
 	double freeCPU;
 	double freeMem;
-	private Map<String, HostAttribute> attributes = new HashMap<>();
+	private Map<String, ResourceAttribute> attributes = new HashMap<>();
 	private List<Long> jidAllocated = new ArrayList<>();
+	private RankingScore scoring = new SimpleRankingScore();
 
 	//	#%% Format: {host_id,host_name,cpu_capacity,mem_capacity,rs,0/,Ql,maq}
 	//	#{0,"Host_1",8,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
@@ -42,13 +46,13 @@ public class Host {
 				st = new StringTokenizer(stConst.nextToken(), ",");
 				String attName = st.nextToken();
 				String attValue = st.nextToken();
-				attributes.put(attName, new HostAttribute(attName, attValue));
+				attributes.put(attName, new ResourceAttribute(attName, attValue));
 			}
 		}
 	}
 	
 	private Host(long id, double cpuCapacity, double freeCPU, double memCapacity, double freeMem,
-			Map<String, HostAttribute> attributes) {
+			Map<String, ResourceAttribute> attributes) {
 		this.id = id;
 		this.cpuCapacity = cpuCapacity;
 		this.freeCPU = freeCPU;
@@ -64,7 +68,7 @@ public class Host {
 
 		// checking capacities and calculating score
 		if (freeCPU >= task.getCpuReq() && freeMem >= task.getMemReq()) {
-			return freeCPU + freeMem;
+			return scoring.calculateScore(task, this);
 		} else {
 			return -1;
 		}
@@ -76,7 +80,7 @@ public class Host {
 		}
 		
 		for (TaskConstraint constraint : task.getConstraints()) {
-			HostAttribute hostAtt = attributes.get(constraint.getAttName());
+			ResourceAttribute hostAtt = attributes.get(constraint.getAttName());
 			
 			if (hostAtt == null || !hostAtt.match(constraint)) {
 				return false;
@@ -115,7 +119,7 @@ public class Host {
 		return freeMem;
 	}
 
-	public Map<String, HostAttribute> getAttributes() {
+	public Map<String, ResourceAttribute> getAttributes() {
 		return attributes;
 	}
 	

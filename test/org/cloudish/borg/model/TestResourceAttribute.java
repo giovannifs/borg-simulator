@@ -3,11 +3,11 @@ package org.cloudish.borg.model;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestHostAttribute {
+public class TestResourceAttribute {
 
 	@Test
 	public void testMatch() {		
-		HostAttribute hAttr = new HostAttribute("attName", "4");
+		ResourceAttribute hAttr = new ResourceAttribute("attName", "4");
 		
 		Assert.assertTrue(hAttr.match(new TaskConstraint("attName", "==", "4")));
 		Assert.assertTrue(hAttr.match(new TaskConstraint("attName", ">", "3")));
@@ -27,7 +27,7 @@ public class TestHostAttribute {
 	
 	@Test
 	public void testMatch2() {		
-		HostAttribute hAttr = new HostAttribute("attName", "bf");
+		ResourceAttribute hAttr = new ResourceAttribute("attName", "bf");
 				
 		Assert.assertTrue(hAttr.match(new TaskConstraint("attName", "==", "bf")));
 		Assert.assertTrue(hAttr.match(new TaskConstraint("attName", ">", "af")));
@@ -48,14 +48,14 @@ public class TestHostAttribute {
 	
 	@Test(expected=IllegalArgumentException.class)
 	public void testMatchInvalidOp() {		
-		HostAttribute hAttr = new HostAttribute("attName", "4");
+		ResourceAttribute hAttr = new ResourceAttribute("attName", "4");
 		
 		Assert.assertTrue(hAttr.match(new TaskConstraint("attName", ">=", "4")));
 	}
 
 	@Test(expected=IllegalArgumentException.class)
 	public void testMatchInvalidOp2() {		
-		HostAttribute hAttr = new HostAttribute("attName", "4");
+		ResourceAttribute hAttr = new ResourceAttribute("attName", "4");
 		
 		Assert.assertTrue(hAttr.match(new TaskConstraint("attName", "<=", "4")));
 	}

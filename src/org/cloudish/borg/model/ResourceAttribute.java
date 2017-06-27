@@ -1,11 +1,11 @@
 package org.cloudish.borg.model;
 
-public class HostAttribute {
+public class ResourceAttribute {
 
 	private String attName;
 	private String attValue;
 	
-	public HostAttribute(String attName, String attValue) {
+	public ResourceAttribute(String attName, String attValue) {
 		this.attName = attName;
 		this.attValue = attValue;
 	}
