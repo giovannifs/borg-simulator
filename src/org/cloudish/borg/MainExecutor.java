@@ -57,6 +57,8 @@ public class MainExecutor {
 		System.out.println("pending-queue-tasks=" + pendingQueue.size());
 		System.out.println("pending-queue-fraction=" + pendingQueueFraction);
 		
+		long now = System.currentTimeMillis();		
+		System.out.println("execution time: " + (now - startTime) + " milliseconds.");
 		
 		int permutation = 1;
 		while (permutation <= numberOfPermutations) {
@@ -111,7 +113,7 @@ public class MainExecutor {
 			permutation++;			
 		}		
 		
-		long now = System.currentTimeMillis();		
+		now = System.currentTimeMillis();		
 		System.out.println("execution time: " + (now - startTime) + " milliseconds.");
 	}
 

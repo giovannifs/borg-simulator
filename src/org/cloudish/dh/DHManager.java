@@ -2,10 +2,10 @@ package org.cloudish.dh;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
-import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.Task;
 import org.cloudish.dh.model.LogicalServer;
 import org.cloudish.dh.model.ResourcePool;
@@ -14,14 +14,60 @@ public class DHManager {
 
 	private List<LogicalServer> logicalServers = new ArrayList<>();
 	private List<Task> pendingQueue = new ArrayList<>();
+	private Map<String, List<ResourcePool>> resourcePools;
+	private double resourceGrain;
+	private int minLogicalServer;
+	private double maxCpuServerCapacity;
+	private double maxMemServerCapacity;
 	
-	public DHManager(Properties properties, List<ResourcePool> resourcePools) {
-		// TODO Auto-generated constructor stub
+	public DHManager(Properties properties, Map<String, List<ResourcePool>> resourcePools) {
+		if (resourcePools.isEmpty()) {
+			throw new IllegalArgumentException("The resource pool must not be empty while creating a DH manager.");
+		}
+
+		this.resourceGrain = Double.parseDouble(properties.getProperty("resource_grain"));
+		this.minLogicalServer = Integer.parseInt(properties.getProperty("min_logical_servers"));
+		this.maxCpuServerCapacity = Double.parseDouble(properties.getProperty("max_cpu_logical_server_capacity"));
+		this.maxMemServerCapacity = Double.parseDouble(properties.getProperty("max_memory_logical_server_capacity"));
+		this.resourcePools = resourcePools;
 	}
 
 	public LogicalServer createLogicalServer(Task task) {
-		// TODO Auto-generated method stub
-		return null;
+		
+		// choosing cpu resource pool
+		ResourcePool bestCpuPool = null;
+		double bestCpuPoolScore = -1;
+		for (ResourcePool cpuPool : resourcePools.get(ResourcePool.CPU_TYPE)) {
+
+			double cpuScore = cpuPool.getScore(task);
+			if (cpuPool.isFeasible(task) && cpuScore > bestCpuPoolScore) {
+				bestCpuPool = cpuPool;
+				bestCpuPoolScore = cpuScore;
+			}
+		}
+		
+		// there is not any cpu pool feasible to the task
+		if (bestCpuPool == null) {
+			return null;
+		}
+		
+		ResourcePool bestMemPool = null;
+		double bestMemPoolScore = -1;
+		for (ResourcePool memPool : resourcePools.get(ResourcePool.MEMORY_TYPE)) {
+
+			double memScore = memPool.getScore(task);
+			if (memPool.isFeasible(task) && memScore > bestMemPoolScore) {
+				bestMemPool = memPool;
+				bestMemPoolScore = memScore;
+			}
+		}
+		// there is not any memory pool feasible to the task
+		if (bestMemPool == null) {
+			return null;
+		}
+		
+		return new LogicalServer(bestCpuPool, bestMemPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
+				getResourceGrain());
 	}
 
 	public boolean allocate(Task task) {
@@ -36,7 +82,7 @@ public class DHManager {
 				bestScore = score;
 				bestLogicalServers.clear();
 				bestLogicalServers.add(lServer);
-			} else if (score == bestScore) {
+			} else if (score == bestScore && bestScore >= 0) {
 				bestLogicalServers.add(lServer);
 			}
 		}
@@ -50,41 +96,47 @@ public class DHManager {
 			if (newLServer != null) {				
 				logicalServers.add(newLServer);
 				newLServer.allocate(task);
-				return true;				
+				return true;
 			
 			} else { // there was not resource to create a new logical server that fulfills the task
 				
 				pendingQueue.add(task);
 				return false;
-			}			
+			}
 		} else {
+			LogicalServer bestLServer = chooseBestLogicalServer(bestLogicalServers, task);
 			
-			List<LogicalServer> filteredBestServers = new ArrayList<>();
-			
-			// there are more than one logical server with the best score
-			if (bestLogicalServers.size() > 1) {
-
-				//order by scale_up_cpu and scale_up_mem
-
-			} 
-			
-//			LogicalServer bestLServer;
-//			bestLServer = bestLogicalServers.get(0);			
-//				
-//			
-//			Random r = new Random();
-//
-//			// choosing a random host inside of best hosts list
-//			Host bestHost = bestLogicalServers.get(r.nextInt(bestLogicalServers.size()));
-//			bestHost.allocate(task);
-		}
-		
-		return true;
+			// this can do scale_up
+			bestLServer.allocate(task);
+			return true;
+		}		
 	}
 
-	public void addLogicalServer(LogicalServer firstServer) {
-		// TODO Auto-generated method stub
-		
+	private LogicalServer chooseBestLogicalServer(List<LogicalServer> bestLogicalServers, Task task) {
+		List<LogicalServer> filteredLServers = new ArrayList<>();
+
+		// check if any logical server does not need scale up
+		double minScaleup = Integer.MAX_VALUE;
+		for (LogicalServer lServer : bestLogicalServers) {
+
+			int scaleUp = lServer.needsCPUScaleUp(task) ? (lServer.needsMemScaleUp(task) ? 2 : 1)
+					: (lServer.needsMemScaleUp(task) ? 1 : 0);
+
+			if (scaleUp < minScaleup) {
+				filteredLServers.clear();
+				filteredLServers.add(lServer);
+				minScaleup = scaleUp;
+			} else if (scaleUp == minScaleup) {
+				filteredLServers.add(lServer);
+			}
+		}
+
+		// choosing a random host inside of filtered logical server list
+		return filteredLServers.get(new Random().nextInt(filteredLServers.size()));
+	}
+
+	public void addLogicalServer(LogicalServer logicalServer) {
+		logicalServers.add(logicalServer);		
 	}
 
 	public List<LogicalServer> getLogicalServers() {
@@ -94,14 +146,45 @@ public class DHManager {
 	public List<Task> getPendingQueue() {
 		return pendingQueue;
 	}
+	
+	public int getMinLogicalServer() {
+		return minLogicalServer;
+	}
+
+	public Map<String, List<ResourcePool>> getResourcePools() {
+		return resourcePools;
+	}
+
+	public double getResourceGrain() {
+		return resourceGrain;
+	}
 
 	public boolean hasMinimumLogicalServer() {
-		// TODO Auto-generated method stub
-		return false;
+		return getLogicalServers().size() >= getMinLogicalServer();
+	}
+
+	public double getMaxCpuServerCapacity() {
+		return maxCpuServerCapacity;
+	}
+
+	public double getMaxMemServerCapacity() {
+		return maxMemServerCapacity;
 	}
 
 	public void createMinimumLogicalServer() {
 		// TODO Auto-generated method stub
+		
+//		There is also an assembling constraint on the whole DH-based infrastructure that defines a minimum number of logical servers. This is treated a posteriori. When all tasks have been scheduled, the following algorithm is executed.
+//
+//		While the minimum number of logical servers is not reached, do:
+//
+//		--- Select the logical server with the worse performance (regarding the evaluation metric)
+//
+//		--- Divide this logical server in two, each with the minimal capacity possible, and using CPU components from the CPU pool originally used by the logical server that has been divided
+//
+//		--- Return all the leftover components to their respective pools
+//
+//		--- Use the same algorithm in the main loop to reschedule the tasks that were allocated in the logical server that was divided but considering only the two logical servers that have been created
 		
 	}
 }

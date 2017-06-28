@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.cloudish.borg.model.Task;
@@ -28,7 +29,7 @@ public class DHMainExecutor {
 		String outputDir = properties.getProperty("output_dir");
 		createOutputDir(outputDir);
 		
-		List<ResourcePool> resourcePools = createResourcePools(infraFilePath);
+		Map<String, List<ResourcePool>> resourcePools = createResourcePools(infraFilePath);
 		
 		DHManager dhManager = new DHManager(properties, resourcePools);
 		
@@ -87,7 +88,7 @@ public class DHMainExecutor {
 		}
 	}
 
-	private static List<ResourcePool> createResourcePools(String infraFilePath) {
+	private static Map<String, List<ResourcePool>> createResourcePools(String infraFilePath) {
 		// TODO Auto-generated method stub
 		return null;
 	}
