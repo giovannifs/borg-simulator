@@ -95,4 +95,14 @@ public class Task {
 	public int getPriority() {
 		return priority;
 	}
+
+	public List<TaskConstraint> getConstraints(String attName) {
+		List<TaskConstraint> attConstraints = new ArrayList<>();
+		for (TaskConstraint taskConstraint : getConstraints()) {
+			if (attName.equals(taskConstraint.getAttName())) {
+				attConstraints.add(taskConstraint);
+			}
+		}
+		return attConstraints;
+	}
 }

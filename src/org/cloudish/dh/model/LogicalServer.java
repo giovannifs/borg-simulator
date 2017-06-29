@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.cloudish.borg.model.Task;
-import org.cloudish.score.RankingScore;
+import org.cloudish.borg.model.TaskConstraint;
+import org.cloudish.dh.DHManager;
 
 public class LogicalServer extends Server {
 
@@ -13,10 +14,39 @@ public class LogicalServer extends Server {
 	private double resourceGrain;
 	private ResourcePool cpuPool;
 	private ResourcePool memPool;
+	private int QlAttr;
+	private String GKAttr;
+	private List<String> notAllowedGKAttr;
+	private int minAllowedQlAtt;
+	private int maxAllowedQlAtt;
+	private DHManager dhManager;
+	
 
 	public LogicalServer(ResourcePool cpuPool, ResourcePool memPool, double maxCPUCapacity,
-			double maxMemCapacity, double resourceGrain) {
-		// TODO Auto-generated constructor stub
+			double maxMemCapacity, double resourceGrain, DHManager dhManager) {
+		this.cpuPool = cpuPool;
+		this.memPool = memPool;
+		this.maxCpuCapacity = maxCPUCapacity;
+		this.maxMemCapacity = maxMemCapacity;
+		this.resourceGrain = resourceGrain;
+		this.dhManager = dhManager;
+		
+		// creating minimal logical server 
+		getCpuPool().allocate(getResourceGrain());
+		getMemPool().allocate(getResourceGrain());
+		
+		cpuCapacity = getResourceGrain();
+		freeCPU = getResourceGrain();
+		memCapacity = getResourceGrain();
+		freeMem = getResourceGrain();
+		
+		// initializing special attributes
+		QlAttr = 1;
+		minAllowedQlAtt = 1;
+		maxAllowedQlAtt = Integer.MAX_VALUE;
+		
+		GKAttr = "";
+		notAllowedGKAttr = new ArrayList<>();
 	}
 
 	public double getScore(Task task) {
@@ -28,9 +58,23 @@ public class LogicalServer extends Server {
 		return rankingScore.calculateScore(task, this);
 	}
 
-	private boolean isFeasible(Task task) {
+	private boolean isFeasible(Task task) {		
+		if (jidAllocated.contains(task.getJid())) {
+			return false;
+		}
+
 		// check if the resource pools are feasible for task
 		if (!cpuPool.isFeasible(task) || !memPool.isFeasible(task)) {
+			return false;
+		}
+		
+		// checking feasibility of GK attribute
+		if (!checkGKAttrFeasibility(task)) {
+			return false;
+		}
+
+		// checking feasibility of Ql attribute
+		if (!checkQlAttrFeasibility(task)) {
 			return false;
 		}
 		
@@ -52,6 +96,69 @@ public class LogicalServer extends Server {
 		}
 
 		return true;
+	}
+
+	private boolean checkQlAttrFeasibility(Task task) {
+		List<TaskConstraint> QlConstraints = task.getConstraints("Ql");
+		if (!QlConstraints.isEmpty()) {
+		
+			for (TaskConstraint constraint : QlConstraints) {
+				
+				if (constraint.getOperator().equals(">")) {
+					
+					if ((Integer.parseInt(constraint.getAttValue()) + 1) > getMaxAllowedQlAtt()) {
+						return false;						
+					}
+				} else { // constraint operator is <
+					if ((Integer.parseInt(constraint.getAttValue()) - 1) < getMinAllowedQlAtt()) {
+						return false;
+					}					
+				}
+			}
+		}
+		
+		return true;
+	}
+
+	private boolean checkGKAttrFeasibility(Task task) {
+		List<TaskConstraint> gkConstraints = task.getConstraints("GK");
+		if(!gkConstraints.isEmpty()) {
+			
+			for (TaskConstraint constraint : gkConstraints) {
+						
+				// constraint with == operator
+				if (constraint.getOperator().equals("==")) {
+		
+					// check if gk is set
+					if (isGKSet()) {
+					
+						// if gk is set and is diff of the value
+						if (!getGKAttr().equals(constraint.getAttValue())) {
+							return false;							
+						}
+					} else { //gk is not set
+						
+						// gk is not available or there is any taks allocated with != operator
+						if (!dhManager.isGKValueAvailable(constraint.getAttValue())
+								|| getNotAllowedGKAttr().contains(constraint.getAttValue())) {
+							return false;
+						}
+					}
+					
+				} else if (constraint.getOperator().equals("!=")) {
+					
+					if (isGKSet() && getGKAttr().equals(constraint.getAttValue())) {
+						return false;
+					}
+				}
+			}
+		}
+		
+		return true;
+	}
+
+	private boolean isGKSet() {
+		return !"".equals(getGKAttr());
 	}
 
 	private double calcCpuToBeRequested(Task task) {
@@ -102,12 +209,58 @@ public class LogicalServer extends Server {
 		freeCPU = freeCPU - task.getCpuReq();
 		freeMem = freeMem - task.getMemReq();
 		
+		if (task.isAntiAffinity()) {
+			jidAllocated.add(task.getJid());		
+		}
+		
+		// treat GK and Ql attributes
+		treatGKAttr(task);
+		treatQlAttr(task);
+
+		// asserting assumptions 
+		if (cpuCapacity > maxCpuCapacity || memCapacity > maxMemCapacity) {
+			throw new RuntimeException(
+					"The capacity of memory or cpu never must be a greater than max values for them.");
+		}
+
 		if (freeCPU < 0 || freeMem < 0) {
 			throw new RuntimeException("The free memory or cpu never must be a negative value.");
 		}
+	}
 
-		if (task.isAntiAffinity()) {
-			jidAllocated.add(task.getJid());		
+	private void treatQlAttr(Task task) {
+		List<TaskConstraint> QlConstraints = task.getConstraints("Ql");
+		
+		if (!QlConstraints.isEmpty()) {
+		
+			for (TaskConstraint constraint : QlConstraints) {
+				if (constraint.getOperator().equals(">")) {
+					QlAttr = Integer.parseInt(constraint.getAttValue()) + 1;
+					minAllowedQlAtt = QlAttr;
+				} else { // constraint operator is <
+					QlAttr = Integer.parseInt(constraint.getAttValue()) - 1;
+					maxAllowedQlAtt = QlAttr;
+				}
+			}
+		}
+	}
+
+	private void treatGKAttr(Task task) {
+		List<TaskConstraint> gkConstraints = task.getConstraints("GK");
+		if(!gkConstraints.isEmpty()) {
+			
+			for (TaskConstraint constraint : gkConstraints) {
+						
+				// constraint with == operator
+				if (constraint.getOperator().equals("==")) {
+					if (!isGKSet()) {
+						dhManager.allocateGKValue(constraint.getAttValue(), this);						
+					}
+					
+				} else { // constraint with operator !=
+					getNotAllowedGKAttr().add(constraint.getAttValue());
+				}
+			}
 		}
 	}
 
@@ -137,5 +290,25 @@ public class LogicalServer extends Server {
 
 	public ResourcePool getMemPool() {
 		return memPool;
+	}
+
+	public int getQlAttr() {
+		return QlAttr;
+	}
+
+	public String getGKAttr() {
+		return GKAttr;
+	}
+
+	public List<String> getNotAllowedGKAttr() {
+		return notAllowedGKAttr;
+	}
+
+	public int getMinAllowedQlAtt() {
+		return minAllowedQlAtt;
+	}
+
+	public int getMaxAllowedQlAtt() {
+		return maxAllowedQlAtt;
 	}
 }

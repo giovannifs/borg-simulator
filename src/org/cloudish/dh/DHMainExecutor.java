@@ -31,7 +31,8 @@ public class DHMainExecutor {
 		
 		Map<String, List<ResourcePool>> resourcePools = createResourcePools(infraFilePath);
 		
-		DHManager dhManager = new DHManager(properties, resourcePools);
+		
+		DHManager dhManager = new DHManager(properties, resourcePools, null);
 		
 		// adding first logical server to DH infra
 		LogicalServer firstServer = dhManager.createLogicalServer(null);

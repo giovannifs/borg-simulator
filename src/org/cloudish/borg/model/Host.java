@@ -11,14 +11,8 @@ import org.cloudish.score.RankingScore;
 public class Host extends Server {
 
 	private long id;
-//private double cpuCapacity;
-//	private double memCapacity;
-//	private double freeCPU;
-//	private double freeMem;
 	private String hostLine;
 	private Map<String, ResourceAttribute> attributes = new HashMap<>();
-//	private List<Long> jidAllocated = new ArrayList<>();
-//	private RankingScore rankingScore;
 
 	public Host(String line) {
 		this(line, new KubernetesRankingScore());
@@ -101,7 +95,6 @@ public class Host extends Server {
 				return false;
 			}			
 		}
-
 		return true;
 	}
 

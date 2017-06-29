@@ -1,6 +1,7 @@
 package org.cloudish.dh;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -15,12 +16,13 @@ public class DHManager {
 	private List<LogicalServer> logicalServers = new ArrayList<>();
 	private List<Task> pendingQueue = new ArrayList<>();
 	private Map<String, List<ResourcePool>> resourcePools;
+	private Map<String, LogicalServer> possibleGKValues = new HashMap<>();
 	private double resourceGrain;
 	private int minLogicalServer;
 	private double maxCpuServerCapacity;
 	private double maxMemServerCapacity;
 	
-	public DHManager(Properties properties, Map<String, List<ResourcePool>> resourcePools) {
+	public DHManager(Properties properties, Map<String, List<ResourcePool>> resourcePools, List<String> possibleGKValues) {
 		if (resourcePools.isEmpty()) {
 			throw new IllegalArgumentException("The resource pool must not be empty while creating a DH manager.");
 		}
@@ -30,37 +32,47 @@ public class DHManager {
 		this.maxCpuServerCapacity = Double.parseDouble(properties.getProperty("max_cpu_logical_server_capacity"));
 		this.maxMemServerCapacity = Double.parseDouble(properties.getProperty("max_memory_logical_server_capacity"));
 		this.resourcePools = resourcePools;
+		
+		for (String gkValue : possibleGKValues) {
+			this.possibleGKValues.put(gkValue, null);
+		}
 	}
 
 	public LogicalServer createLogicalServer(Task task) {
 		// choosing cpu resource pool
 		ResourcePool bestCpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
-		
+
 		// there is not any cpu pool feasible to the task
 		if (bestCpuPool == null) {
 			return null;
 		}
-		
+
 		ResourcePool bestMemPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
-		
+
 		// there is not any memory pool feasible to the task
 		if (bestMemPool == null) {
 			return null;
 		}
-		
+
 		return new LogicalServer(bestCpuPool, bestMemPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
-				getResourceGrain());
+				getResourceGrain(), this);
 	}
 
 	private ResourcePool chooseResourcePool(String poolType, Task task) {
 		ResourcePool bestPool = null;
 		double bestPoolScore = -1;
+		
 		for (ResourcePool resourcePool : resourcePools.get(poolType)) {
-
-			double cpuScore = resourcePool.getScore(task);
-			if (resourcePool.isFeasible(task) && cpuScore > bestPoolScore) {
-				bestPool = resourcePool;
-				bestPoolScore = cpuScore;
+			
+			// checking if pool is feasible
+			if (resourcePool.isFeasible(task)){
+				
+				// calculating score
+				double cpuScore = resourcePool.getScore();
+				if (cpuScore > bestPoolScore) {
+					bestPool = resourcePool;
+					bestPoolScore = cpuScore;
+				}
 			}
 		}
 		return bestPool;
@@ -166,6 +178,10 @@ public class DHManager {
 	public double getMaxMemServerCapacity() {
 		return maxMemServerCapacity;
 	}
+	
+	public Map<String, LogicalServer> getPossibleGKValues() {
+		return possibleGKValues;
+	}
 
 	public void createMinimumLogicalServer() {
 		// TODO Auto-generated method stub
@@ -182,5 +198,17 @@ public class DHManager {
 //
 //		--- Use the same algorithm in the main loop to reschedule the tasks that were allocated in the logical server that was divided but considering only the two logical servers that have been created
 		
+	}
+
+	public boolean isGKValueAvailable(String GKValue) {
+		return getPossibleGKValues().containsKey(GKValue) && getPossibleGKValues().get(GKValue) == null;
+	}
+
+	public void allocateGKValue(String attValue, LogicalServer logicalServer) {
+		if (!getPossibleGKValues().containsKey(attValue) || getPossibleGKValues().get(attValue) != null) {
+			throw new RuntimeException("Trying to allocate a GK value that is not available.");
+		}
+
+		getPossibleGKValues().put(attValue, logicalServer);
 	}
 }
