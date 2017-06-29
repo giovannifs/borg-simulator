@@ -1,7 +1,7 @@
 package org.cloudish.score;
 
-import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.Task;
+import org.cloudish.dh.model.Server;
 
 /**
  * BalancedResourceAllocation favors nodes with balanced resource usage rate.
@@ -23,7 +23,7 @@ import org.cloudish.borg.model.Task;
 public class BalancedResourceAllocationRankingScore implements RankingScore {
 
 	@Override
-	public double calculateScore(Task task, Host host) {
+	public double calculateScore(Task task, Server host) {
 		if (host == null) {
 			throw new IllegalArgumentException("Host must not be null.");
 		}

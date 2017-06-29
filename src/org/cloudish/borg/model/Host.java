@@ -1,25 +1,24 @@
 package org.cloudish.borg.model;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import org.cloudish.dh.model.Server;
 import org.cloudish.score.KubernetesRankingScore;
 import org.cloudish.score.RankingScore;
 
-public class Host {
+public class Host extends Server {
 
 	private long id;
-	private double cpuCapacity;
-	private double memCapacity;
-	private double freeCPU;
-	private double freeMem;
+//private double cpuCapacity;
+//	private double memCapacity;
+//	private double freeCPU;
+//	private double freeMem;
 	private String hostLine;
 	private Map<String, ResourceAttribute> attributes = new HashMap<>();
-	private List<Long> jidAllocated = new ArrayList<>();
-	private RankingScore rankingScore;
+//	private List<Long> jidAllocated = new ArrayList<>();
+//	private RankingScore rankingScore;
 
 	public Host(String line) {
 		this(line, new KubernetesRankingScore());
@@ -118,23 +117,7 @@ public class Host {
 	public long getId() {
 		return id;
 	}
-
-	public double getCpuCapacity() {
-		return cpuCapacity;
-	}
-
-	public double getMemCapacity() {
-		return memCapacity;
-	}
-
-	public double getFreeCPU() {
-		return freeCPU;
-	}
-
-	public double getFreeMem() {
-		return freeMem;
-	}
-	
+		
 	public String getHostLine() {
 		return hostLine;
 	}
@@ -143,10 +126,6 @@ public class Host {
 		return attributes;
 	}
 	
-	public RankingScore getRankingScore() {
-		return rankingScore;
-	}
-
 	public Host clone() {
 		return new Host(getId(), getCpuCapacity(), getFreeCPU(), getMemCapacity(), getFreeMem(), getRankingScore(),
 				getAttributes());

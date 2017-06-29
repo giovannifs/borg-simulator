@@ -1,7 +1,7 @@
 package org.cloudish.score;
 
-import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.Task;
+import org.cloudish.dh.model.Server;
 
 /**
  * The algorithm of how to select a node for the Pod is explained. There are two
@@ -37,7 +37,7 @@ public class KubernetesRankingScore implements RankingScore {
 	BalancedResourceAllocationRankingScore balancedResourceScore = new BalancedResourceAllocationRankingScore();
 
 	@Override
-	public double calculateScore(Task task, Host host) {
+	public double calculateScore(Task task, Server host) {
 		return leastRequestedScore.calculateScore(task, host) + balancedResourceScore.calculateScore(task, host);
 	}
 }

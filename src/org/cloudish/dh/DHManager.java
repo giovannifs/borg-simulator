@@ -33,34 +33,16 @@ public class DHManager {
 	}
 
 	public LogicalServer createLogicalServer(Task task) {
-		
 		// choosing cpu resource pool
-		ResourcePool bestCpuPool = null;
-		double bestCpuPoolScore = -1;
-		for (ResourcePool cpuPool : resourcePools.get(ResourcePool.CPU_TYPE)) {
-
-			double cpuScore = cpuPool.getScore(task);
-			if (cpuPool.isFeasible(task) && cpuScore > bestCpuPoolScore) {
-				bestCpuPool = cpuPool;
-				bestCpuPoolScore = cpuScore;
-			}
-		}
+		ResourcePool bestCpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
 		
 		// there is not any cpu pool feasible to the task
 		if (bestCpuPool == null) {
 			return null;
 		}
 		
-		ResourcePool bestMemPool = null;
-		double bestMemPoolScore = -1;
-		for (ResourcePool memPool : resourcePools.get(ResourcePool.MEMORY_TYPE)) {
-
-			double memScore = memPool.getScore(task);
-			if (memPool.isFeasible(task) && memScore > bestMemPoolScore) {
-				bestMemPool = memPool;
-				bestMemPoolScore = memScore;
-			}
-		}
+		ResourcePool bestMemPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
+		
 		// there is not any memory pool feasible to the task
 		if (bestMemPool == null) {
 			return null;
@@ -68,6 +50,20 @@ public class DHManager {
 		
 		return new LogicalServer(bestCpuPool, bestMemPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
 				getResourceGrain());
+	}
+
+	private ResourcePool chooseResourcePool(String poolType, Task task) {
+		ResourcePool bestPool = null;
+		double bestPoolScore = -1;
+		for (ResourcePool resourcePool : resourcePools.get(poolType)) {
+
+			double cpuScore = resourcePool.getScore(task);
+			if (resourcePool.isFeasible(task) && cpuScore > bestPoolScore) {
+				bestPool = resourcePool;
+				bestPoolScore = cpuScore;
+			}
+		}
+		return bestPool;
 	}
 
 	public boolean allocate(Task task) {

@@ -30,6 +30,16 @@ public class ResourcePool {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+
+	public boolean hasMoreResource(double requested) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public double allocate(double resourceRequest) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 	
 	
 }
