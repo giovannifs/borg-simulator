@@ -3,12 +3,17 @@ package org.cloudish.dh;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.cloudish.borg.model.Host;
+import org.cloudish.borg.model.ResourceAttribute;
 import org.cloudish.borg.model.Task;
 import org.cloudish.dh.model.LogicalServer;
 import org.cloudish.dh.model.ResourcePool;
@@ -89,8 +94,53 @@ public class DHMainExecutor {
 		}
 	}
 
-	private static Map<String, List<ResourcePool>> createResourcePools(String infraFilePath) {
-		// TODO Auto-generated method stub
-		return null;
+	private static Map<String, List<ResourcePool>> createResourcePools(String infraFilePath) throws IOException {
+		// creating hosts
+		List<Host> hosts = new ArrayList<Host>();
+		
+		BufferedReader br = new BufferedReader(new FileReader(infraFilePath));
+		try {
+		    String line = br.readLine();
+		    while (line != null) {
+		    	hosts.add(new Host(line));
+		    	line = br.readLine();
+		    }
+		} finally {
+		    br.close();
+		}
+		
+		// creating resource pools from hosts
+		Map<String, List<ResourcePool>> pools = new HashMap<>();
+		pools.put(ResourcePool.CPU_TYPE, new ArrayList<>());
+		pools.put(ResourcePool.MEMORY_TYPE, new ArrayList<>());
+		
+		ResourcePool memPool = new ResourcePool(ResourcePool.MEMORY_TYPE, new HashMap<>());
+		
+		for (Host host : hosts) {
+			memPool.incorporateHost(host);
+			
+			boolean hostIncorporated = false;
+			List<ResourcePool> cpuPools = pools.get(ResourcePool.CPU_TYPE);
+			for (ResourcePool cpuPool : cpuPools) {
+				if (cpuPool.match(host)) {
+					hostIncorporated = true;
+					cpuPool.incorporateHost(host);
+					break;
+				}
+			}
+			
+			if (!hostIncorporated) {
+				// TODO create a new Resource Pool based on host attributes and incorporates the host
+				ResourcePool cpuPool = new ResourcePool(ResourcePool.CPU_TYPE, host.getAttributes());
+				cpuPool.incorporateHost(host);
+				pools.get(ResourcePool.CPU_TYPE).add(cpuPool);
+			}
+			
+		}
+		
+		// adding memory pools (only one)
+		pools.get(ResourcePool.MEMORY_TYPE).add(memPool);
+		
+		return pools;
 	}
 }
