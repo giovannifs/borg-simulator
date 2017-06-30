@@ -6,6 +6,7 @@ import java.util.List;
 import org.cloudish.borg.model.Task;
 import org.cloudish.borg.model.TaskConstraint;
 import org.cloudish.dh.DHManager;
+import org.cloudish.score.KubernetesRankingScore;
 
 public class LogicalServer extends Server {
 
@@ -40,6 +41,8 @@ public class LogicalServer extends Server {
 		memCapacity = getResourceGrain();
 		freeMem = getResourceGrain();
 		
+		this.rankingScore = new KubernetesRankingScore();
+		
 		// initializing special attributes
 		QlAttr = 1;
 		minAllowedQlAtt = 1;
@@ -53,8 +56,16 @@ public class LogicalServer extends Server {
 		if (!isFeasible(task)) {
 			return -1;
 		}
-
-		// TODO calculate score needs to consider the logical server scaled up
+		
+		// check if logical server needs to be scaled up
+		if (needsCPUScaleUp(task) || needsMemScaleUp(task)) {
+			double cpuToBeRequested = calcCpuToBeRequested(task);
+			double memToBeRequested = calcMemToBeRequested(task);
+			FakeScaledUpServer server = new FakeScaledUpServer(cpuCapacity + cpuToBeRequested,
+					freeCPU + cpuToBeRequested, memCapacity + memToBeRequested, freeMem + memToBeRequested);
+			return rankingScore.calculateScore(task, server);
+		}
+		
 		return rankingScore.calculateScore(task, this);
 	}
 
@@ -311,4 +322,25 @@ public class LogicalServer extends Server {
 	public int getMaxAllowedQlAtt() {
 		return maxAllowedQlAtt;
 	}
+}
+
+class FakeScaledUpServer extends Server {
+
+	public FakeScaledUpServer(double cpuCapacity, double freeCpu, double memCapacity, double freeMem) {
+		this.cpuCapacity = cpuCapacity;
+		this.freeCPU = freeCpu;
+		this.memCapacity = memCapacity;
+		this.freeMem = freeMem;
+	}
+	
+	@Override
+	public double getScore(Task task) {
+		return -1;
+	}
+
+	@Override
+	public void allocate(Task task) {
+		throw new RuntimeException("Not implemented.");		
+	}
+	
 }

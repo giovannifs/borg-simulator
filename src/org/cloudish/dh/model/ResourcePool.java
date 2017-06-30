@@ -1,6 +1,8 @@
 package org.cloudish.dh.model;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.cloudish.borg.model.Host;
@@ -14,10 +16,24 @@ public class ResourcePool {
 	public static final String MEMORY_TYPE = "memory";
 
 	private String poolType;
+	private String id;
 	private double capacity;
 	private double freeCapacity;
 	private Map<String, ResourceAttribute> attributes = new HashMap<>();
-
+	@SuppressWarnings("serial")
+	public static final List<String> CPU_ATTRIBUTES = new ArrayList<String>() {{
+		add("9e");
+		add("By");
+		add("nZ");
+		add("St");
+		add("o/");
+		add("P8");
+		add("wN");
+		add("rs");
+		add("w2");
+		add("w5");
+	}};
+	
 	// 5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]
 	public ResourcePool(String poolType, Map<String, ResourceAttribute> attributes) {
 		this(poolType, 0, attributes);
@@ -31,9 +47,27 @@ public class ResourcePool {
 		// TODO verify if this is cpupool and filter the interested attributes
 		// the attributes can be configured
 		this.attributes = attributes;
+		
+		if (poolType.equals(CPU_TYPE)) {
+			String cpuAttr = "";
+			for (ResourceAttribute attr : attributes.values()) {
+				cpuAttr += attr.toString() + ";"; 
+			}
+			if (attributes.isEmpty()) {
+				this.id = "cpu-pool:[]";
+			} else {
+				this.id = "cpu-pool:[" + cpuAttr.substring(0, cpuAttr.length() -1) + "]";
+			}
+		} else {
+			this.id = "mem-pool:[]";
+		}
 	}
 
 	public boolean isFeasible(Task task) {
+		if (task == null) {
+			return true;
+		}
+		
 		for (TaskConstraint constraint : task.getConstraints()) {
 
 			/*
@@ -41,26 +75,16 @@ public class ResourcePool {
 			 */
 			if (!"GK".equals(constraint.getAttName()) && !"Ql".equals(constraint.getAttName())) {
 				ResourceAttribute resourceAtt = attributes.get(constraint.getAttName());
+				System.out.println("attName=" + constraint.getAttName() + " resourceAttr=" + resourceAtt);
 
 				if (resourceAtt == null || !resourceAtt.match(constraint)) {
+					System.out.println("FALSE");
 					return false;
 				}
 			}
 		}
 
-		if (CPU_TYPE.equals(getPoolType())) {
-			if (freeCapacity >= task.getCpuReq()) {
-				return true;
-			}
-		} else if (MEMORY_TYPE.equals(getPoolType())) {
-			if (freeCapacity >= task.getMemReq()) {
-				return true;
-			}
-		} else {
-			throw new RuntimeException("The resource pool is not of a known type.");
-		}
-
-		return false;
+		return true;
 	}
 
 	public double getScore() {
@@ -95,14 +119,49 @@ public class ResourcePool {
 	public Map<String, ResourceAttribute> getAttributes() {
 		return attributes;
 	}
+	
+	public String getId() {
+		return id;
+	}
 
 	public void incorporateHost(Host host) {
-		// TODO Auto-generated method stub
-
+		if (poolType.equals(MEMORY_TYPE)) {
+			capacity += host.getMemCapacity();
+			freeCapacity += host.getMemCapacity();
+		} else if (poolType.equals(CPU_TYPE)){
+			capacity += host.getCpuCapacity();
+			freeCapacity += host.getCpuCapacity();
+		} else {
+			throw new RuntimeException("The resource pool has a unkown pool type.");
+		}
 	}
 
 	public boolean match(Host host) {
-		// TODO Auto-generated method stub
-		return false;
+		if (poolType.equals(MEMORY_TYPE)) {
+			return true;
+		} else if (poolType.equals(CPU_TYPE)){
+			
+			for (String cpuAttribute : CPU_ATTRIBUTES) {
+				// check if attribute is configured only in one of them
+				if (host.getAttributes().get(cpuAttribute) == null && getAttributes().get(cpuAttribute) != null) {
+					return false;
+				} else if (host.getAttributes().get(cpuAttribute) != null
+						&& getAttributes().get(cpuAttribute) == null) {
+					return false;
+				
+				// check if attribute is configured in both and has different values
+				} else if (host.getAttributes().get(cpuAttribute) != null
+						&& getAttributes().get(cpuAttribute) != null) {
+
+					if (!host.getAttributes().get(cpuAttribute).equals(getAttributes().get(cpuAttribute))) {
+						return false;
+					}
+				}
+			}
+			
+			return true;
+		} else {
+			throw new RuntimeException("The resource pool has a unkown pool type.");
+		}
 	}
 }

@@ -105,4 +105,11 @@ public class Task {
 		}
 		return attConstraints;
 	}
+	
+	@Override
+	public String toString() {
+		return "jid=" + getJid() + ", tid=" + getTid() + ", cpuReq=" + getCpuReq() + ", memReq=" + getMemReq()
+				+ ", priority=" + getPriority() + ", antiaffinity=" + isAntiAffinity() + ", constraints="
+				+ getConstraints();
+	}
 }

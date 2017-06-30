@@ -7,13 +7,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 import org.cloudish.borg.model.Host;
-import org.cloudish.borg.model.ResourceAttribute;
 import org.cloudish.borg.model.Task;
 import org.cloudish.dh.model.LogicalServer;
 import org.cloudish.dh.model.ResourcePool;
@@ -34,14 +32,30 @@ public class DHMainExecutor {
 		String outputDir = properties.getProperty("output_dir");
 		createOutputDir(outputDir);
 		
-		Map<String, List<ResourcePool>> resourcePools = createResourcePools(infraFilePath);
+		List<Host> hosts = createHosts(infraFilePath);
+
+		Map<String, List<ResourcePool>> resourcePools = Utils.createResourcePoolsFromHosts(hosts);
 		
+		System.out.println("How many MemPool? " + resourcePools.get(ResourcePool.MEMORY_TYPE).size());
+		System.out.println("MemPool size: " + resourcePools.get(ResourcePool.MEMORY_TYPE).get(0).getCapacity());
 		
-		DHManager dhManager = new DHManager(properties, resourcePools, null);
+		System.out.println("How many CpuPool? " + resourcePools.get(ResourcePool.CPU_TYPE).size());
+		for (ResourcePool pool : resourcePools.get(ResourcePool.CPU_TYPE)) {
+			System.out.println(pool.getId() + " - size: " + pool.getCapacity());
+		}
 		
-		// adding first logical server to DH infra
-		LogicalServer firstServer = dhManager.createLogicalServer(null);
-		dhManager.addLogicalServer(firstServer);
+		System.out.println("----------------------------------------------------------------------");
+		
+		List<String> GKValues = Utils.getPossibleGKValues(hosts);
+		
+		DHManager dhManager = new DHManager(properties, resourcePools, GKValues);
+		
+		// creating initial DH-based infrastructure
+		while (dhManager.getLogicalServers().size() < dhManager.getMinLogicalServer()) {
+			
+			LogicalServer logicalServer = dhManager.createLogicalServer(null);
+			dhManager.addLogicalServer(logicalServer);			
+		}
 				
 		// allocating the tasks
 		int numberOfTasks = 0;
@@ -68,18 +82,13 @@ public class DHMainExecutor {
 		} finally {
 			br.close();
 		}
-		
-		// checking minimum logical server constraint
-		if (!dhManager.hasMinimumLogicalServer()) {
-			// create amount of minimum logical server
-			dhManager.createMinimumLogicalServer();
-		}		
-				
+
 		double pendingQueueFraction = new Double(dhManager.getPendingQueue().size())/new Double(numberOfTasks);
 
 		// saveHostInfo(properties, chosenHosts);
 		// savePendingQueueInfo(properties, chosenHosts, pendingQueue);
 
+		System.out.println("logical-servers=" + dhManager.getLogicalServers().size());
 		System.out.println("pending-queue-tasks=" + dhManager.getPendingQueue().size());
 		System.out.println("pending-queue-fraction=" + pendingQueueFraction);
 	
@@ -94,53 +103,20 @@ public class DHMainExecutor {
 		}
 	}
 
-	private static Map<String, List<ResourcePool>> createResourcePools(String infraFilePath) throws IOException {
+	private static List<Host> createHosts(String infraFilePath) throws FileNotFoundException, IOException {
 		// creating hosts
 		List<Host> hosts = new ArrayList<Host>();
-		
+
 		BufferedReader br = new BufferedReader(new FileReader(infraFilePath));
 		try {
-		    String line = br.readLine();
-		    while (line != null) {
-		    	hosts.add(new Host(line));
-		    	line = br.readLine();
-		    }
+			String line = br.readLine();
+			while (line != null) {
+				hosts.add(new Host(line));
+				line = br.readLine();
+			}
 		} finally {
-		    br.close();
+			br.close();
 		}
-		
-		// creating resource pools from hosts
-		Map<String, List<ResourcePool>> pools = new HashMap<>();
-		pools.put(ResourcePool.CPU_TYPE, new ArrayList<>());
-		pools.put(ResourcePool.MEMORY_TYPE, new ArrayList<>());
-		
-		ResourcePool memPool = new ResourcePool(ResourcePool.MEMORY_TYPE, new HashMap<>());
-		
-		for (Host host : hosts) {
-			memPool.incorporateHost(host);
-			
-			boolean hostIncorporated = false;
-			List<ResourcePool> cpuPools = pools.get(ResourcePool.CPU_TYPE);
-			for (ResourcePool cpuPool : cpuPools) {
-				if (cpuPool.match(host)) {
-					hostIncorporated = true;
-					cpuPool.incorporateHost(host);
-					break;
-				}
-			}
-			
-			if (!hostIncorporated) {
-				// TODO create a new Resource Pool based on host attributes and incorporates the host
-				ResourcePool cpuPool = new ResourcePool(ResourcePool.CPU_TYPE, host.getAttributes());
-				cpuPool.incorporateHost(host);
-				pools.get(ResourcePool.CPU_TYPE).add(cpuPool);
-			}
-			
-		}
-		
-		// adding memory pools (only one)
-		pools.get(ResourcePool.MEMORY_TYPE).add(memPool);
-		
-		return pools;
+		return hosts;
 	}
 }

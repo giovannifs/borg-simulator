@@ -57,4 +57,24 @@ public class ResourceAttribute {
 	public String getAttValue() {
 		return attValue;
 	}
+		
+	public void setAttValue(String attValue) {
+		this.attValue = attValue;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof ResourceAttribute) {
+			ResourceAttribute otherResAttr = (ResourceAttribute) obj;
+			return otherResAttr.getAttName().equals(getAttName()) && otherResAttr.getAttValue().equals(getAttValue());
+		}
+
+		return false;
+	}
+	
+	@Override
+	public String toString() {
+		return getAttName() + "=" + getAttValue();
+	}
+	
 }

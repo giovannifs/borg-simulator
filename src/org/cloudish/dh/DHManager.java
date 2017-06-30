@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Properties;
 import java.util.Random;
+import java.util.TreeMap;
 
 import org.cloudish.borg.model.Task;
 import org.cloudish.dh.model.LogicalServer;
@@ -38,24 +40,42 @@ public class DHManager {
 		}
 	}
 
-	public LogicalServer createLogicalServer(Task task) {
-		// choosing cpu resource pool
-		ResourcePool bestCpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
-
-		// there is not any cpu pool feasible to the task
-		if (bestCpuPool == null) {
-			return null;
+	public LogicalServer createLogicalServer(Task task) {		
+		ResourcePool cpuPool = null;
+		ResourcePool memPool = null;
+		
+		// creating initial logical server, then it must choose cpuPool according to its size
+		if (task == null) {			
+			cpuPool = chooseCpuPoolRandomly();
+			memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
+			
+		} else {
+			// choosing cpu resource pool
+			cpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
+			memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
 		}
 
-		ResourcePool bestMemPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
-
-		// there is not any memory pool feasible to the task
-		if (bestMemPool == null) {
+		// there is not any cpu or mem pool feasible to the task
+		if (cpuPool == null || memPool == null) {
 			return null;
 		}
-
-		return new LogicalServer(bestCpuPool, bestMemPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
+		
+		return new LogicalServer(cpuPool, memPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
 				getResourceGrain(), this);
+	}
+
+	private ResourcePool chooseCpuPoolRandomly() {
+		ResourcePool cpuPool;
+		RandomCollection<ResourcePool> rc = new RandomCollection<ResourcePool>();
+		
+		for (ResourcePool pool : resourcePools.get(ResourcePool.CPU_TYPE)) {
+			rc.add(pool.getFreeCapacity(), pool);				
+		}
+		
+		cpuPool = rc.next();
+		
+		System.out.println(cpuPool.getId() + " - size: " + cpuPool.getCapacity());
+		return cpuPool;
 	}
 
 	private ResourcePool chooseResourcePool(String poolType, Task task) {
@@ -80,6 +100,7 @@ public class DHManager {
 
 	public boolean allocate(Task task) {
 		
+		System.out.println("Allocating " + task);
 		double bestScore = -1;
 		List<LogicalServer> bestLogicalServers = new ArrayList<>();
 		
@@ -97,8 +118,9 @@ public class DHManager {
 
 		// There is not feasible logical server 
 		if (bestScore < 0 && bestLogicalServers.isEmpty()) {
+			System.out.println("There is not logical server feasible.");
 			
-			// create new logicalServer					
+			// create new logicalServer
 			LogicalServer newLServer = createLogicalServer(task);
 			
 			if (newLServer != null) {				
@@ -211,4 +233,30 @@ public class DHManager {
 
 		getPossibleGKValues().put(attValue, logicalServer);
 	}
+}
+
+class RandomCollection<E> {
+    private final NavigableMap<Double, E> map = new TreeMap<Double, E>();
+    private final Random random;
+    private double total = 0;
+
+    public RandomCollection() {
+        this(new Random());
+    }
+
+    public RandomCollection(Random random) {
+        this.random = random;
+    }
+
+    public RandomCollection<E> add(double weight, E result) {
+        if (weight <= 0) return this;
+        total += weight;
+        map.put(total, result);
+        return this;
+    }
+
+    public E next() {
+        double value = random.nextDouble() * total;
+        return map.higherEntry(value).getValue();
+    }
 }

@@ -35,4 +35,9 @@ public class TaskConstraint {
 		}
 		return false;
 	}
+	
+	@Override
+	public String toString() {
+		return getAttName() + getOperator()  + getAttValue();
+	}
 }
