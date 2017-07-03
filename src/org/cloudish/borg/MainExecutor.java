@@ -58,60 +58,68 @@ public class MainExecutor {
 		System.out.println("pending-queue-fraction=" + pendingQueueFraction);
 		
 		long now = System.currentTimeMillis();		
-		System.out.println("execution time: " + (now - startTime) + " milliseconds.");
+		System.out.println("first allocation execution time: " + (now - startTime) + " milliseconds.");
 		
-		int permutation = 1;
-		while (permutation <= numberOfPermutations) {
-			// creating output directory
-			String permutationOutDir = outputDir + "/host_permutation_" + permutation;
-			checkAndCreateDir(permutationOutDir);
+		if (pendingQueueFraction > admittedPendingFraction) {
+			System.out.println("It is not possible fulfill " + admittedPendingFraction
+					+ " pending queue fraction considering full infrastructure.");
+			System.exit(0);
 			
-			// saving host permutation
-			saveHostPermutation(permutationOutDir, hosts);
-			
-			int permutationIndex = 1;
-			
-			int min = 0;
-			int max = hosts.size();
-			int mid = (int)((min + max)/2);
-			
-			List<Integer> previousMids = new ArrayList<>();
-			
-			while(!previousMids.contains(mid)) {
-				System.out.println("Executing scenario " + permutation + " round " + permutationIndex++);
+		} else {
+			int permutation = 1;
+			while (permutation <= numberOfPermutations) {
+				// creating output directory
+				String permutationOutDir = outputDir + "/host_permutation_" + permutation;
+				checkAndCreateDir(permutationOutDir);
 				
-				// chosen first mid hosts
-				chosenHosts = getFirstHosts(hosts, mid);
+				// saving host permutation
+				saveHostPermutation(permutationOutDir, hosts);
 				
-				System.out.println("scenario " + permutation + " round " + permutationIndex+ " - hosts="+chosenHosts.size());
+				int permutationIndex = 1;
 				
-				pendingQueue = new ArrayList<Task>();
+				int min = 0;
+				int max = hosts.size();
+				int mid = (int)((min + max)/2);
 				
-				numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
-				pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
+				List<Integer> previousMids = new ArrayList<>();
 				
-				saveHostInfo(permutationOutDir, chosenHosts);
-				savePendingQueueInfo(permutationOutDir, chosenHosts, pendingQueue);
-				
-				System.out.println("scenario " + permutation + " round " + permutationIndex+ " - pending-queue-tasks=" + pendingQueue.size());
-				System.out.println("scenario " + permutation + " round " + permutationIndex+ " - pending-queue-fraction=" + pendingQueueFraction);
-				
-				// checking pending queue fraction
-				if (pendingQueueFraction > admittedPendingFraction) {
-					min = mid;
-				} else {
-					max = mid;
+				while(!previousMids.contains(mid)) {
+					System.out.println("Executing scenario " + permutation + " round " + permutationIndex++);
+					
+					// chosen first mid hosts
+					chosenHosts = getFirstHosts(hosts, mid);
+					
+					System.out.println("scenario " + permutation + " round " + permutationIndex+ " - hosts="+chosenHosts.size());
+					
+					pendingQueue = new ArrayList<Task>();
+					
+					numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
+					pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
+					
+					saveHostInfo(permutationOutDir, chosenHosts);
+					savePendingQueueInfo(permutationOutDir, chosenHosts, pendingQueue);
+					
+					System.out.println("scenario " + permutation + " round " + permutationIndex+ " - pending-queue-tasks=" + pendingQueue.size());
+					System.out.println("scenario " + permutation + " round " + permutationIndex+ " - pending-queue-fraction=" + pendingQueueFraction);
+					
+					// checking pending queue fraction
+					if (pendingQueueFraction > admittedPendingFraction) {
+						min = mid;
+					} else {
+						max = mid;
+					}
+					
+					// updating variables
+					previousMids.add(mid);
+					mid = (int)((min + max)/2);
 				}
 				
-				// updating variables
-				previousMids.add(mid);
-				mid = (int)((min + max)/2);
-			}
+				// shuffle hosts
+				Collections.shuffle(hosts);
+				permutation++;			
+			}		
 			
-			// shuffle hosts
-			Collections.shuffle(hosts);
-			permutation++;			
-		}		
+		}
 		
 		now = System.currentTimeMillis();		
 		System.out.println("execution time: " + (now - startTime) + " milliseconds.");

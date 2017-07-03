@@ -25,6 +25,8 @@ public class DHManager {
 	private double maxCpuServerCapacity;
 	private double maxMemServerCapacity;
 	
+	private boolean constraintsOn = true;
+	
 	public DHManager(Properties properties, Map<String, List<ResourcePool>> resourcePools, List<String> possibleGKValues) {
 		if (resourcePools.isEmpty()) {
 			throw new IllegalArgumentException("The resource pool must not be empty while creating a DH manager.");
@@ -32,6 +34,9 @@ public class DHManager {
 
 		this.cpuResourceGrain = Double.parseDouble(properties.getProperty("cpu_resource_grain"));		
 		this.memResourceGrain = Double.parseDouble(properties.getProperty("mem_resource_grain"));
+		
+		this.constraintsOn = properties.getProperty("placement_constraints_on") == null
+				|| properties.getProperty("placement_constraints_on").equals("yes") ? true : false;
 
 		this.minLogicalServer = Integer.parseInt(properties.getProperty("min_logical_servers"));
 		this.maxCpuServerCapacity = Double.parseDouble(properties.getProperty("max_cpu_logical_server_capacity"));
