@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -85,8 +87,8 @@ public class DHMainExecutor {
 
 		double pendingQueueFraction = new Double(dhManager.getPendingQueue().size())/new Double(numberOfTasks);
 
-		// saveHostInfo(properties, chosenHosts);
-		// savePendingQueueInfo(properties, chosenHosts, pendingQueue);
+		 saveLogicalServerInfo(outputDir, dhManager.getLogicalServers());
+		 savePendingQueueInfo(outputDir, dhManager);
 
 		System.out.println("logical-servers=" + dhManager.getLogicalServers().size());
 		System.out.println("pending-queue-tasks=" + dhManager.getPendingQueue().size());
@@ -118,5 +120,29 @@ public class DHMainExecutor {
 			br.close();
 		}
 		return hosts;
+	}
+	
+	private static void saveLogicalServerInfo(String outputDir, List<LogicalServer> logicalServers)
+			throws FileNotFoundException, UnsupportedEncodingException {
+		// generating host outputs
+		PrintWriter writer = new PrintWriter(outputDir + "/allocation-" + logicalServers.size() + "-logicalservers.csv", "UTF-8");
+		writer.println("cpuPoolId,cpuCapacity,freeCpu,memCapacity,freeMem,gkAttr,QlAttr");
+		for (LogicalServer logicalServer : logicalServers) {
+			writer.println(logicalServer.getCpuPool().getId() + "," + logicalServer.getCpuCapacity() + ","
+					+ logicalServer.getFreeCPU() + "," + logicalServer.getMemCapacity() + ","
+					+ logicalServer.getFreeMem() + "," + logicalServer.getGKAttr() + "," + logicalServer.getQlAttr());
+		}
+		writer.close();
+	}
+	
+	private static void savePendingQueueInfo(String outputDir, DHManager dhManager)
+			throws FileNotFoundException, UnsupportedEncodingException {
+		PrintWriter writer = new PrintWriter(
+				outputDir + "/pending-queue-" + dhManager.getLogicalServers().size() + "-logicalservers.csv", "UTF-8");
+		writer.println("tid,jid");
+		for (Task task : dhManager.getPendingQueue()) {
+			writer.println(task.getTid() + "," + task.getJid());
+		}
+		writer.close();
 	}
 }

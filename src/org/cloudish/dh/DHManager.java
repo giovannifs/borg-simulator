@@ -19,7 +19,8 @@ public class DHManager {
 	private List<Task> pendingQueue = new ArrayList<>();
 	private Map<String, List<ResourcePool>> resourcePools;
 	private Map<String, LogicalServer> possibleGKValues = new HashMap<>();
-	private double resourceGrain;
+	private double cpuResourceGrain;
+	private double memResourceGrain;
 	private int minLogicalServer;
 	private double maxCpuServerCapacity;
 	private double maxMemServerCapacity;
@@ -29,7 +30,9 @@ public class DHManager {
 			throw new IllegalArgumentException("The resource pool must not be empty while creating a DH manager.");
 		}
 
-		this.resourceGrain = Double.parseDouble(properties.getProperty("resource_grain"));
+		this.cpuResourceGrain = Double.parseDouble(properties.getProperty("cpu_resource_grain"));		
+		this.memResourceGrain = Double.parseDouble(properties.getProperty("mem_resource_grain"));
+
 		this.minLogicalServer = Integer.parseInt(properties.getProperty("min_logical_servers"));
 		this.maxCpuServerCapacity = Double.parseDouble(properties.getProperty("max_cpu_logical_server_capacity"));
 		this.maxMemServerCapacity = Double.parseDouble(properties.getProperty("max_memory_logical_server_capacity"));
@@ -61,7 +64,7 @@ public class DHManager {
 		}
 		
 		return new LogicalServer(cpuPool, memPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
-				getResourceGrain(), this);
+				getCpuResourceGrain(), getMemResourceGrain(), this);
 	}
 
 	private ResourcePool chooseCpuPoolRandomly() {
@@ -185,8 +188,12 @@ public class DHManager {
 		return resourcePools;
 	}
 
-	public double getResourceGrain() {
-		return resourceGrain;
+	public double getCpuResourceGrain() {
+		return cpuResourceGrain;
+	}
+	
+	public double getMemResourceGrain() {
+		return memResourceGrain;
 	}
 
 	public boolean hasMinimumLogicalServer() {

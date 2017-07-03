@@ -44,8 +44,6 @@ public class ResourcePool {
 		this.capacity = capacity;
 		this.freeCapacity = capacity;
 
-		// TODO verify if this is cpupool and filter the interested attributes
-		// the attributes can be configured
 		this.attributes = attributes;
 		
 		if (poolType.equals(CPU_TYPE)) {
@@ -77,10 +75,8 @@ public class ResourcePool {
 				 */
 				if (!"GK".equals(constraint.getAttName()) && !"Ql".equals(constraint.getAttName())) {
 					ResourceAttribute resourceAtt = attributes.get(constraint.getAttName());
-					System.out.println("attName=" + constraint.getAttName() + " resourceAttr=" + resourceAtt);
 					
 					if (resourceAtt == null || !resourceAtt.match(constraint)) {
-						System.out.println("FALSE");
 						return false;
 					}
 				}

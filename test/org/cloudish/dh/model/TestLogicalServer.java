@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.logging.ConsoleHandler;
 
 import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.ResourceAttribute;
@@ -27,6 +26,7 @@ public class TestLogicalServer {
 
 	private LogicalServer logicalServer;
 	
+	@SuppressWarnings("serial")
 	@Before
 	public void setUp() {
 		Map<String, ResourceAttribute> poolAttributes = new HashMap<>();
@@ -46,7 +46,8 @@ public class TestLogicalServer {
 		
 		Properties properties = new Properties();
 
-		properties.put("resource_grain", "0.1");
+		properties.put("cpu_resource_grain", "0.1");
+		properties.put("mem_resource_grain", "0.1");
 		properties.put("min_logical_servers", "1");
 		properties.put("max_cpu_logical_server_capacity", "1");
 		properties.put("max_memory_logical_server_capacity","1");
@@ -59,21 +60,27 @@ public class TestLogicalServer {
 			add(memPool);
 			}});
 		
-		DHManager dhManager = new DHManager(properties, resourcePools, new ArrayList<>());
+		ArrayList<String> possibleGKValues = new ArrayList<>();
+		possibleGKValues.add("Ul");
+		possibleGKValues.add("Ai");
+		possibleGKValues.add("Oi");
+		possibleGKValues.add("Sp");
+		
+		DHManager dhManager = new DHManager(properties, resourcePools, possibleGKValues);
 		
 		Assert.assertEquals(CPU_CAPACITY, cpuPool.getCapacity(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(CPU_CAPACITY, cpuPool.getFreeCapacity(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(MEM_CAPACITY, memPool.getCapacity(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(MEM_CAPACITY, memPool.getFreeCapacity(), ACCEPTABLE_DIFF);
 		
-		logicalServer = new LogicalServer(cpuPool, memPool, 1, 1, 0.1, dhManager);
+		logicalServer = new LogicalServer(cpuPool, memPool, 1, 1, 0.1, 0.1, dhManager);
 		
 		// checking logical server initial configuration
 		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(0.1, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(0.1, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
-		Assert.assertEquals(0.1, logicalServer.getResourceGrain(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getCpuResourceGrain(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(cpuPool, logicalServer.getCpuPool());
 		Assert.assertEquals(memPool, logicalServer.getMemPool());
 		Assert.assertEquals(1, logicalServer.getMaxCpuCapacity(), ACCEPTABLE_DIFF);
@@ -246,7 +253,8 @@ public class TestLogicalServer {
 	@Test
 	public void testCalCpuToBeRequested2() {		
 		// resource grain is 0.001
-		logicalServer.setResourceGrain(0.001);
+		logicalServer.setCpuResourceGrain(0.001);
+		logicalServer.setMemResourceGrain(0.001);
 		
 		Task task = new Task(0, 10, 1, 0.05, 11, false, new ArrayList<>());
 		Assert.assertEquals(0.9, logicalServer.calcCpuToBeRequested(task), ACCEPTABLE_DIFF);
@@ -303,8 +311,9 @@ public class TestLogicalServer {
 	@Test
 	public void testCalMemToBeRequested2() {		
 		// resource grain is 0.001
-		logicalServer.setResourceGrain(0.001);
-		
+		logicalServer.setCpuResourceGrain(0.001);
+		logicalServer.setMemResourceGrain(0.001);
+
 		Task task = new Task(0, 10, 0.05, 1, 11, false, new ArrayList<>());
 		Assert.assertEquals(0.9, logicalServer.calcMemToBeRequested(task), ACCEPTABLE_DIFF);
 
@@ -492,4 +501,181 @@ public class TestLogicalServer {
 		Task task = new Task(0, 10, 0.05, 1.1, 11, false, new ArrayList<>());
 		logicalServer.allocate(task);
 	}
+	
+	@Test
+	public void testAllocateWithConstraint() {
+		List<TaskConstraint> constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("9e", "==", "2"));
+		constraints.add(new TaskConstraint("w2", ">", "0"));
+		
+		Task task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		logicalServer.allocate(task);
+		
+		// checking that logical server does not change its configuration
+		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
+		
+		Assert.assertTrue(logicalServer.getJidAllocated().isEmpty());
+
+		Assert.assertEquals("", logicalServer.getGKAttr());
+		Assert.assertEquals(1, logicalServer.getQlAttr());
+		Assert.assertEquals(Integer.MAX_VALUE, logicalServer.getMaxAllowedQlAtt());
+		Assert.assertEquals(1, logicalServer.getMinAllowedQlAtt());
+	}
+	
+	@Test
+	public void testAllocateWithAntiaffinity() {		
+		Task task = new Task(0, 10, 0.05, 0.05, 11, true, new ArrayList<>());
+		logicalServer.allocate(task);
+		
+		// checking that logical server does not change its configuration
+		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
+		
+		Assert.assertEquals(1, logicalServer.getJidAllocated().size());
+		Assert.assertEquals(new Long(10), logicalServer.getJidAllocated().get(0));
+
+		Assert.assertEquals("", logicalServer.getGKAttr());
+		Assert.assertEquals(1, logicalServer.getQlAttr());
+		Assert.assertEquals(Integer.MAX_VALUE, logicalServer.getMaxAllowedQlAtt());
+		Assert.assertEquals(1, logicalServer.getMinAllowedQlAtt());
+	}
+	
+	@Test
+	public void testAllocateWithGKConstraint() {
+		List<TaskConstraint> constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("GK", "==", "Ul"));
+		
+		Assert.assertTrue(logicalServer.getDhManager().isGKValueAvailable("Ul"));
+		
+		Task task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		logicalServer.allocate(task);
+		
+		// checking that logical server does not change its configuration
+		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
+		
+		Assert.assertTrue(logicalServer.getJidAllocated().isEmpty());
+		Assert.assertFalse(logicalServer.getDhManager().isGKValueAvailable("Ul"));
+
+		Assert.assertEquals("Ul", logicalServer.getGKAttr());
+		Assert.assertEquals(1, logicalServer.getQlAttr());
+		Assert.assertEquals(Integer.MAX_VALUE, logicalServer.getMaxAllowedQlAtt());
+		Assert.assertEquals(1, logicalServer.getMinAllowedQlAtt());
+		
+		// checking if other task with GK constraint could be allocate in this host
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("GK", "==", "Oi"));
+		
+		Assert.assertTrue(logicalServer.getDhManager().isGKValueAvailable("Oi"));
+		
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertFalse(logicalServer.isFeasible(task));		
+	}
+	
+	@Test
+	public void testAllocateWithGKDiffConstraint() {
+		List<TaskConstraint> constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("GK", "!=", "Ul"));
+		
+		Assert.assertTrue(logicalServer.getDhManager().isGKValueAvailable("Ul"));
+		
+		Task task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		logicalServer.allocate(task);
+		
+		// checking that logical server does not change its configuration
+		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
+		
+		Assert.assertTrue(logicalServer.getJidAllocated().isEmpty());
+		Assert.assertTrue(logicalServer.getDhManager().isGKValueAvailable("Ul"));
+
+		Assert.assertEquals("", logicalServer.getGKAttr());
+		Assert.assertEquals(1, logicalServer.getQlAttr());
+		Assert.assertEquals(Integer.MAX_VALUE, logicalServer.getMaxAllowedQlAtt());
+		Assert.assertEquals(1, logicalServer.getMinAllowedQlAtt());
+		
+		// checking if other task with GK constraint could be allocate in this host
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("GK", "==", "Ul"));
+		
+		Assert.assertTrue(logicalServer.getDhManager().isGKValueAvailable("Ul"));
+		
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertFalse(logicalServer.isFeasible(task));		
+	}
+	
+	@Test
+	public void testAllocateWithQlConstraint() {
+		List<TaskConstraint> constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("Ql", ">", "2"));
+		
+		Task task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		logicalServer.allocate(task);
+		
+		// checking that logical server does not change its configuration
+		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
+		
+		Assert.assertTrue(logicalServer.getJidAllocated().isEmpty());
+
+		Assert.assertEquals("", logicalServer.getGKAttr());
+		Assert.assertEquals(3, logicalServer.getQlAttr());
+		Assert.assertEquals(Integer.MAX_VALUE, logicalServer.getMaxAllowedQlAtt());
+		Assert.assertEquals(3, logicalServer.getMinAllowedQlAtt());
+		
+		// checking if other task with Ql constraint could be allocate in this host
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("Ql", "<", "3"));
+		
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertFalse(logicalServer.isFeasible(task));		
+	}
+	
+	@Test
+	public void testAllocateWithQlConstraint2() {
+		List<TaskConstraint> constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("Ql", ">", "5"));
+		constraints.add(new TaskConstraint("Ql", "<", "13"));
+		
+		Task task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		logicalServer.allocate(task);
+		
+		// checking that logical server does not change its configuration
+		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.05, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
+		
+		Assert.assertTrue(logicalServer.getJidAllocated().isEmpty());
+
+		Assert.assertEquals("", logicalServer.getGKAttr());
+		Assert.assertEquals(12, logicalServer.getQlAttr());
+		Assert.assertEquals(12, logicalServer.getMaxAllowedQlAtt());
+		Assert.assertEquals(6, logicalServer.getMinAllowedQlAtt());
+		
+		// checking if other task with Ql constraint could be allocate in this host
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("Ql", "<", "3"));
+		
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertFalse(logicalServer.isFeasible(task));		
+		
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("Ql", ">", "12"));
+		
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertFalse(logicalServer.isFeasible(task));
+	}
+	
 }

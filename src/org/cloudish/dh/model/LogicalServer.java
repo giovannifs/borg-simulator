@@ -13,7 +13,8 @@ public class LogicalServer extends Server {
 
 	private double maxCpuCapacity;
 	private double maxMemCapacity;
-	private double resourceGrain;
+	private double cpuResourceGrain;
+	private double memResourceGrain;
 	private ResourcePool cpuPool;
 	private ResourcePool memPool;
 	private int QlAttr;
@@ -25,22 +26,23 @@ public class LogicalServer extends Server {
 	
 
 	public LogicalServer(ResourcePool cpuPool, ResourcePool memPool, double maxCPUCapacity,
-			double maxMemCapacity, double resourceGrain, DHManager dhManager) {
+			double maxMemCapacity, double cpuResourceGrain, double memResourceGrain, DHManager dhManager) {
 		this.cpuPool = cpuPool;
 		this.memPool = memPool;
 		this.maxCpuCapacity = maxCPUCapacity;
 		this.maxMemCapacity = maxMemCapacity;
-		this.resourceGrain = resourceGrain;
+		this.cpuResourceGrain = cpuResourceGrain;
+		this.memResourceGrain = memResourceGrain;
 		this.dhManager = dhManager;
 		
 		// creating minimal logical server 
-		getCpuPool().allocate(getResourceGrain());
-		getMemPool().allocate(getResourceGrain());
+		getCpuPool().allocate(getCpuResourceGrain());
+		getMemPool().allocate(getMemResourceGrain());
 		
-		cpuCapacity = getResourceGrain();
-		freeCPU = getResourceGrain();
-		memCapacity = getResourceGrain();
-		freeMem = getResourceGrain();
+		cpuCapacity = getCpuResourceGrain();
+		freeCPU = getCpuResourceGrain();
+		memCapacity = getMemResourceGrain();
+		freeMem = getMemResourceGrain();
 		
 		this.rankingScore = new KubernetesRankingScore();
 		
@@ -176,8 +178,8 @@ public class LogicalServer extends Server {
 	protected double calcCpuToBeRequested(Task task) {
 		if (freeCPU < task.getCpuReq()) {
 			double cpuToBeScaled = Utils.format(task.getCpuReq() - freeCPU);
-			int numberOfGrains = (int) Math.ceil(cpuToBeScaled/getResourceGrain());
-			double cpuToBeRequested = Utils.format(numberOfGrains * getResourceGrain());
+			int numberOfGrains = (int) Math.ceil(cpuToBeScaled/getCpuResourceGrain());
+			double cpuToBeRequested = Utils.format(numberOfGrains * getCpuResourceGrain());
 			return cpuToBeRequested;
 		}
 		return 0;
@@ -186,9 +188,9 @@ public class LogicalServer extends Server {
 	protected double calcMemToBeRequested(Task task) {
 		if (freeMem < task.getMemReq()) {
 			double memToBeScaled = Utils.format(task.getMemReq() - freeMem);
-			int numberOfGrains = (int) Math.ceil(memToBeScaled/getResourceGrain()); 
+			int numberOfGrains = (int) Math.ceil(memToBeScaled/getMemResourceGrain()); 
 			
-			double memToBeRequested = Utils.format(numberOfGrains * getResourceGrain());
+			double memToBeRequested = Utils.format(numberOfGrains * getMemResourceGrain());
 			return memToBeRequested;
 		}
 		return 0;
@@ -209,8 +211,8 @@ public class LogicalServer extends Server {
 			double cpuToBeRequested = calcCpuToBeRequested(task);
 			getCpuPool().allocate(cpuToBeRequested);
 			
-			cpuCapacity += cpuToBeRequested;
-			freeCPU +=  cpuToBeRequested;
+			cpuCapacity = Utils.format(cpuCapacity + cpuToBeRequested);
+			freeCPU = Utils.format(freeCPU + cpuToBeRequested);
 		}
 		
 		if (needsMemScaleUp(task)) {
@@ -218,13 +220,13 @@ public class LogicalServer extends Server {
 			
 			getMemPool().allocate(memToBeRequested);
 			
-			memCapacity += memToBeRequested;
-			freeMem += memToBeRequested;
+			memCapacity = Utils.format(memCapacity + memToBeRequested);
+			freeMem = Utils.format(freeMem + memToBeRequested);
 		}
 		
 		// allocating the task
-		freeCPU = freeCPU - task.getCpuReq();
-		freeMem = freeMem - task.getMemReq();
+		freeCPU = Utils.format(freeCPU - task.getCpuReq());
+		freeMem = Utils.format(freeMem - task.getMemReq());
 		
 		if (task.isAntiAffinity()) {
 			jidAllocated.add(task.getJid());		
@@ -271,7 +273,8 @@ public class LogicalServer extends Server {
 				// constraint with == operator
 				if (constraint.getOperator().equals("==")) {
 					if (!isGKSet()) {
-						dhManager.allocateGKValue(constraint.getAttValue(), this);						
+						dhManager.allocateGKValue(constraint.getAttValue(), this);
+						this.GKAttr = constraint.getAttValue();
 					}
 					
 				} else { // constraint with operator !=
@@ -297,8 +300,12 @@ public class LogicalServer extends Server {
 		return maxMemCapacity;
 	}
 
-	public double getResourceGrain() {
-		return resourceGrain;
+	public double getCpuResourceGrain() {
+		return cpuResourceGrain;
+	}
+	
+	public double getMemResourceGrain() {
+		return memResourceGrain;
 	}
 
 	public ResourcePool getCpuPool() {
@@ -328,9 +335,17 @@ public class LogicalServer extends Server {
 	public int getMaxAllowedQlAtt() {
 		return maxAllowedQlAtt;
 	}
+	
+	protected DHManager getDhManager() {
+		return dhManager;
+	}
 
-	protected void setResourceGrain(double resourceGrain) {
-		this.resourceGrain = resourceGrain;
+	protected void setCpuResourceGrain(double resourceGrain) {
+		this.cpuResourceGrain = resourceGrain;
+	}
+	
+	protected void setMemResourceGrain(double resourceGrain) {
+		this.memResourceGrain = resourceGrain;
 	}
 
 	protected void setMaxCpuCapacity(double maxCpuCapacity) {
