@@ -1,8 +1,10 @@
 package org.cloudish.dh;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.cloudish.borg.model.Host;
@@ -68,4 +70,16 @@ public class Utils {
 
 		return GKValues;
 	}
+	
+	static {Locale.setDefault(Locale.ROOT);}
+
+    private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.##########");
+
+    public static double format(double value){
+
+        String truncatedValue = DECIMAL_FORMAT.format(value);
+        double doubleValue = Double.parseDouble(truncatedValue);
+
+        return doubleValue;
+    }
 }

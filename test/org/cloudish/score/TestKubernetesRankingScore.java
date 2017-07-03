@@ -63,4 +63,30 @@ public class TestKubernetesRankingScore {
 	
 		Assert.assertEquals(0, score.calculateScore(null, h), ACCEPTABLE_DIFF);
 	}
+	
+	@Test
+	public void testCalculateScore5() {
+		KubernetesRankingScore score = new KubernetesRankingScore();
+
+		Host h = new Host(0, 0.1, 0.1, null, new HashMap<>());
+		h.allocate(new Task(0, 10, 0.1, 0.1, 11, true, new ArrayList<>()));
+		// balancedResource score is 0
+		// leastRequestes score is 0
+	
+		Assert.assertEquals(0, score.calculateScore(null, h), ACCEPTABLE_DIFF);
+	}
+	
+	@Test
+	public void testCalculateScore6() {
+		KubernetesRankingScore score = new KubernetesRankingScore();
+
+		Host h = new Host(0, 0.1, 0.1, null, new HashMap<>());
+		h.allocate(new Task(0, 10, 0.05, 0.05, 11, true, new ArrayList<>()));
+		// balancedResource score is 10
+		// leastRequestes score is 10
+	
+		Assert.assertEquals(15, score.calculateScore(null, h), ACCEPTABLE_DIFF);
+	}
+	
+	
 }

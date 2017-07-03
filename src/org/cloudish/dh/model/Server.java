@@ -38,4 +38,8 @@ public abstract class Server {
 	public RankingScore getRankingScore() {
 		return rankingScore;
 	}
+
+	public List<Long> getJidAllocated() {
+		return jidAllocated;
+	}	
 }

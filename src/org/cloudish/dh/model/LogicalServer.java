@@ -6,6 +6,7 @@ import java.util.List;
 import org.cloudish.borg.model.Task;
 import org.cloudish.borg.model.TaskConstraint;
 import org.cloudish.dh.DHManager;
+import org.cloudish.dh.Utils;
 import org.cloudish.score.KubernetesRankingScore;
 
 public class LogicalServer extends Server {
@@ -69,7 +70,7 @@ public class LogicalServer extends Server {
 		return rankingScore.calculateScore(task, this);
 	}
 
-	private boolean isFeasible(Task task) {		
+	protected boolean isFeasible(Task task) {		
 		if (jidAllocated.contains(task.getJid())) {
 			return false;
 		}
@@ -172,20 +173,25 @@ public class LogicalServer extends Server {
 		return !"".equals(getGKAttr());
 	}
 
-	private double calcCpuToBeRequested(Task task) {
-		double cpuToBeScaled = task.getCpuReq() - freeCPU;
-		int numberOfGrains = (int) Math.round(cpuToBeScaled/getResourceGrain() + 0.5d); 
-		
-		double cpuToBeRequested = numberOfGrains * getResourceGrain();
-		return cpuToBeRequested;
+	protected double calcCpuToBeRequested(Task task) {
+		if (freeCPU < task.getCpuReq()) {
+			double cpuToBeScaled = Utils.format(task.getCpuReq() - freeCPU);
+			int numberOfGrains = (int) Math.ceil(cpuToBeScaled/getResourceGrain());
+			double cpuToBeRequested = Utils.format(numberOfGrains * getResourceGrain());
+			return cpuToBeRequested;
+		}
+		return 0;
 	}
 
-	private double calcMemToBeRequested(Task task) {
-		double memToBeScaled = task.getMemReq() - freeMem;
-		int numberOfGrains = (int) Math.round(memToBeScaled/getResourceGrain() + 0.5d); 
-		
-		double memToBeRequested = numberOfGrains * getResourceGrain();
-		return memToBeRequested;
+	protected double calcMemToBeRequested(Task task) {
+		if (freeMem < task.getMemReq()) {
+			double memToBeScaled = Utils.format(task.getMemReq() - freeMem);
+			int numberOfGrains = (int) Math.ceil(memToBeScaled/getResourceGrain()); 
+			
+			double memToBeRequested = Utils.format(numberOfGrains * getResourceGrain());
+			return memToBeRequested;
+		}
+		return 0;
 	}
 
 	private boolean exceedCpuMaxCapacity(double cpuToBeRequested) {
@@ -203,12 +209,12 @@ public class LogicalServer extends Server {
 			double cpuToBeRequested = calcCpuToBeRequested(task);
 			getCpuPool().allocate(cpuToBeRequested);
 			
-			cpuCapacity += cpuCapacity + cpuToBeRequested;
+			cpuCapacity += cpuToBeRequested;
 			freeCPU +=  cpuToBeRequested;
 		}
 		
 		if (needsMemScaleUp(task)) {
-			double memToBeRequested = calcCpuToBeRequested(task);
+			double memToBeRequested = calcMemToBeRequested(task);
 			
 			getMemPool().allocate(memToBeRequested);
 			
@@ -322,6 +328,19 @@ public class LogicalServer extends Server {
 	public int getMaxAllowedQlAtt() {
 		return maxAllowedQlAtt;
 	}
+
+	protected void setResourceGrain(double resourceGrain) {
+		this.resourceGrain = resourceGrain;
+	}
+
+	protected void setMaxCpuCapacity(double maxCpuCapacity) {
+		this.maxCpuCapacity = maxCpuCapacity;
+	}
+
+	protected void setMaxMemCapacity(double maxMemCapacity) {
+		this.maxMemCapacity = maxMemCapacity;
+	}	
+	
 }
 
 class FakeScaledUpServer extends Server {

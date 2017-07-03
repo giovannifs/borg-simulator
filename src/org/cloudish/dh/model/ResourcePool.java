@@ -68,20 +68,23 @@ public class ResourcePool {
 			return true;
 		}
 		
-		for (TaskConstraint constraint : task.getConstraints()) {
-
-			/*
-			 * Ignoring GK and Ql attribute, these are treated by logical server
-			 */
-			if (!"GK".equals(constraint.getAttName()) && !"Ql".equals(constraint.getAttName())) {
-				ResourceAttribute resourceAtt = attributes.get(constraint.getAttName());
-				System.out.println("attName=" + constraint.getAttName() + " resourceAttr=" + resourceAtt);
-
-				if (resourceAtt == null || !resourceAtt.match(constraint)) {
-					System.out.println("FALSE");
-					return false;
+		// constraints are related only with CPU pools
+		if (poolType.equals(CPU_TYPE)) {
+			for (TaskConstraint constraint : task.getConstraints()) {
+				
+				/*
+				 * Ignoring GK and Ql attribute, these are treated by logical server
+				 */
+				if (!"GK".equals(constraint.getAttName()) && !"Ql".equals(constraint.getAttName())) {
+					ResourceAttribute resourceAtt = attributes.get(constraint.getAttName());
+					System.out.println("attName=" + constraint.getAttName() + " resourceAttr=" + resourceAtt);
+					
+					if (resourceAtt == null || !resourceAtt.match(constraint)) {
+						System.out.println("FALSE");
+						return false;
+					}
 				}
-			}
+			}			
 		}
 
 		return true;
