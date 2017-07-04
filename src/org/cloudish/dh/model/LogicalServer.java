@@ -74,21 +74,25 @@ public class LogicalServer extends Server {
 
 	protected boolean isFeasible(Task task) {		
 		if (jidAllocated.contains(task.getJid())) {
+//			System.out.println("Logical Server is not feasible because of antiaffinity constraint.");
 			return false;
 		}
 
 		// check if the resource pools are feasible for task
 		if (!cpuPool.isFeasible(task) || !memPool.isFeasible(task)) {
+//			System.out.println("Logical Server is not feasible because of pool attributes.");
 			return false;
 		}
 		
 		// checking feasibility of GK attribute
 		if (!checkGKAttrFeasibility(task)) {
+//			System.out.println("Logical Server is not feasible because of GK constraint.");
 			return false;
 		}
 
 		// checking feasibility of Ql attribute
 		if (!checkQlAttrFeasibility(task)) {
+//			System.out.println("Logical Server is not feasible because of Ql constraint.");
 			return false;
 		}
 		
@@ -97,6 +101,7 @@ public class LogicalServer extends Server {
 			double cpuToBeRequested = calcCpuToBeRequested(task);
 			
 			if (!cpuPool.hasMoreResource(cpuToBeRequested) || exceedCpuMaxCapacity(cpuToBeRequested)) {
+//				System.out.println("Logical Server is not feasible because pool does not have more resource or exceed cpu capacity.");
 				return false;
 			}
 		}

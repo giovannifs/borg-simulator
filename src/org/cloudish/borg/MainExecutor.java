@@ -154,9 +154,9 @@ public class MainExecutor {
 			throws FileNotFoundException, UnsupportedEncodingException {
 		PrintWriter writer = new PrintWriter(
 				outputDir + "/pending-queue-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
-		writer.println("tid,jid");
+		writer.println("tid,jid,cpuReq,memReq,priority");
 		for (Task task : pendingQueue) {
-			writer.println(task.getTid() + "," + task.getJid());
+			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + "," + task.getPriority());
 		}
 		writer.close();
 	}

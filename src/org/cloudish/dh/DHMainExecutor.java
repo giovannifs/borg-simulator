@@ -139,9 +139,9 @@ public class DHMainExecutor {
 			throws FileNotFoundException, UnsupportedEncodingException {
 		PrintWriter writer = new PrintWriter(
 				outputDir + "/pending-queue-" + dhManager.getLogicalServers().size() + "-logicalservers.csv", "UTF-8");
-		writer.println("tid,jid");
+		writer.println("tid,jid,cpuReq,memReq,priority");
 		for (Task task : dhManager.getPendingQueue()) {
-			writer.println(task.getTid() + "," + task.getJid());
+			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + "," + task.getPriority());
 		}
 		writer.close();
 	}
