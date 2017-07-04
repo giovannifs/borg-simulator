@@ -9,6 +9,7 @@ import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.ResourceAttribute;
 import org.cloudish.borg.model.Task;
 import org.cloudish.borg.model.TaskConstraint;
+import org.cloudish.dh.Utils;
 
 public class ResourcePool {
 
@@ -95,7 +96,7 @@ public class ResourcePool {
 	}
 
 	public void allocate(double resourceRequest) {
-		freeCapacity = freeCapacity - resourceRequest;
+		freeCapacity = Utils.format(freeCapacity - resourceRequest);
 
 		if (freeCapacity < 0) {
 			throw new RuntimeException(

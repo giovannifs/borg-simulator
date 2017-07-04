@@ -92,9 +92,16 @@ public class DHManager {
 		
 		for (ResourcePool resourcePool : resourcePools.get(poolType)) {
 			
-			// checking if pool is feasible
-			if (resourcePool.isFeasible(task)){
-				
+			// checking if pool is feasible and has amount of resource available
+			double resourceToBeRequested;
+			if (poolType.equals(ResourcePool.CPU_TYPE)) {
+				resourceToBeRequested = calcCpuToBeRequested(task);
+			} else {
+				resourceToBeRequested = calcMemToBeRequested(task);
+			}
+			
+			if (resourcePool.isFeasible(task) && resourcePool.hasMoreResource(resourceToBeRequested)) {
+
 				// calculating score
 				double cpuScore = resourcePool.getScore();
 				if (cpuScore > bestPoolScore) {
@@ -105,6 +112,29 @@ public class DHManager {
 		}
 		return bestPool;
 	}
+	
+	private double calcCpuToBeRequested(Task task) {
+		if (task == null) {
+			return getCpuResourceGrain();
+		}
+		double cpuToBeScaled = Utils.format(task.getCpuReq());
+		int numberOfGrains = (int) Math.ceil(cpuToBeScaled / getCpuResourceGrain());
+		double cpuToBeRequested = Utils.format(numberOfGrains * getCpuResourceGrain());
+		return cpuToBeRequested;
+
+	}
+
+	private double calcMemToBeRequested(Task task) {
+		if (task == null) {
+			return getMemResourceGrain();
+		}
+		double memToBeScaled = Utils.format(task.getMemReq());
+		int numberOfGrains = (int) Math.ceil(memToBeScaled / getMemResourceGrain());
+
+		double memToBeRequested = Utils.format(numberOfGrains * getMemResourceGrain());
+		return memToBeRequested;
+	}
+
 
 	public boolean allocate(Task task) {
 		

@@ -157,8 +157,35 @@ public class TestResourcePool {
 	}
 	
 	@Test
-	public void test() {
+	public void testIsFeasibleAndHasMoreResource() {
+		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes);
+	
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), poolAttributes);
 		
+		Assert.assertTrue(pool.match(host));
+		pool.incorporateHost(host);
+		
+		// scenario 1
+		ArrayList<TaskConstraint> constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("9e", "==", "2"));
+		constraints.add(new TaskConstraint("w5", ">", "0"));
+		
+		Task task = new Task(0, 10, 0.5, 0.5, 11, true, constraints);
+		
+		Assert.assertTrue(pool.isFeasible(task));
+		Assert.assertTrue(pool.hasMoreResource(task.getCpuReq()));
+		
+		// scenario 2
+		task = new Task(0, 10, 10, 0.5, 11, true, constraints);
+		
+		Assert.assertTrue(pool.isFeasible(task));
+		Assert.assertTrue(pool.hasMoreResource(task.getCpuReq()));
+		
+		// scenario 3
+		task = new Task(0, 10, 10.01, 0.5, 11, true, constraints);
+		
+		Assert.assertTrue(pool.isFeasible(task));
+		Assert.assertFalse(pool.hasMoreResource(task.getCpuReq()));
 	}
 
 
