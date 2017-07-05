@@ -39,7 +39,7 @@ public class TestLogicalServer {
 		ResourcePool cpuPool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes);
 		ResourcePool memPool = new ResourcePool(ResourcePool.MEMORY_TYPE, new HashMap<>());
 		
-		Host host = new Host(0, CPU_CAPACITY, MEM_CAPACITY, new KubernetesRankingScore(), poolAttributes);
+		Host host = new Host(0, CPU_CAPACITY, MEM_CAPACITY, new KubernetesRankingScore(), poolAttributes, true);
 		
 		cpuPool.incorporateHost(host);
 		memPool.incorporateHost(host);
@@ -73,7 +73,7 @@ public class TestLogicalServer {
 		Assert.assertEquals(MEM_CAPACITY, memPool.getCapacity(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(MEM_CAPACITY, memPool.getFreeCapacity(), ACCEPTABLE_DIFF);
 		
-		logicalServer = new LogicalServer(cpuPool, memPool, 1, 1, 0.1, 0.1, dhManager);
+		logicalServer = new LogicalServer(cpuPool, memPool, 1, 1, 0.1, 0.1, dhManager, true);
 		
 		// checking logical server initial configuration
 		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
@@ -132,7 +132,7 @@ public class TestLogicalServer {
 	}
 	
 	@Test
-	public void testIsFeasibleWithConstraint() {
+	public void testIsFeasibleWithConstraintOn() {
 		// constraints that match with cpu pool
 		List<TaskConstraint> constraints = new ArrayList<>();
 		constraints.add(new TaskConstraint("9e", "==", "2"));
@@ -178,9 +178,60 @@ public class TestLogicalServer {
 		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
 		Assert.assertEquals(0.1, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
 	}
+
+	@Test
+	public void testIsFeasibleWithConstraintOff() {
+		logicalServer.setConstraintOn(false);
+		
+		// constraints that match with cpu pool
+		List<TaskConstraint> constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("9e", "==", "2"));
+		constraints.add(new TaskConstraint("rs", "!=", "1"));
+		constraints.add(new TaskConstraint("w5", ">", "0"));
+		
+		Task task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertTrue(logicalServer.isFeasible(task));
+
+		// constraints that do not match with cpu pool
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("9e", "!=", "2"));
+		constraints.add(new TaskConstraint("rs", "==", "1"));
+
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertTrue(logicalServer.isFeasible(task));
+		
+		// constraints that do not match with cpu pool
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("St", "==", "1"));
+
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertTrue(logicalServer.isFeasible(task));
+
+		// constraints with GK attribute
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("GK", "!=", "Al"));
+
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertTrue(logicalServer.isFeasible(task));
+		
+		// constraints with Ql attribute
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("Ql", "<", "5"));
+		constraints.add(new TaskConstraint("Ql", ">", "0"));
+
+		task = new Task(0, 10, 0.05, 0.05, 11, false, constraints);
+		Assert.assertTrue(logicalServer.isFeasible(task));
+				
+		// checking that logical server does not change its configuration
+		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
+	}
+
 	
 	@Test
-	public void testIsFeasibleBasedOnPoolCapacity() {
+	public void testIsFeasibleBasedOnPoolCapacityConstraintOn() {
 		logicalServer.setMaxCpuCapacity(Integer.MAX_VALUE);
 		
 		Task task = new Task(0, 10, 1, 0.05, 11, false, new ArrayList<>());
@@ -222,6 +273,50 @@ public class TestLogicalServer {
 		Assert.assertEquals(0.1, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
 	}
 
+	@Test
+	public void testIsFeasibleBasedOnPoolCapacityConstraintOff() {
+		logicalServer.setConstraintOn(false);
+		logicalServer.setMaxCpuCapacity(Integer.MAX_VALUE);
+		
+		Task task = new Task(0, 10, 1, 0.05, 11, false, new ArrayList<>());
+		Assert.assertTrue(logicalServer.isFeasible(task));
+
+		task = new Task(0, 10, 5, 0.05, 11, false, new ArrayList<>());
+		Assert.assertTrue(logicalServer.isFeasible(task));
+		
+		task = new Task(0, 10, 15, 0.05, 11, false, new ArrayList<>());
+		Assert.assertTrue(logicalServer.isFeasible(task));
+
+		task = new Task(0, 10, CPU_CAPACITY, 0.05, 11, false, new ArrayList<>());
+		Assert.assertTrue(logicalServer.isFeasible(task));
+		
+		task = new Task(0, 10, CPU_CAPACITY + 0.01, 0.05, 11, false, new ArrayList<>());
+		Assert.assertFalse(logicalServer.isFeasible(task));
+		
+		logicalServer.setMaxMemCapacity(Integer.MAX_VALUE);
+		
+		task = new Task(0, 10, 0.05, 1, 11, false, new ArrayList<>());
+		Assert.assertTrue(logicalServer.isFeasible(task));
+
+		task = new Task(0, 10, 0.05, 5, 11, false, new ArrayList<>());
+		Assert.assertTrue(logicalServer.isFeasible(task));
+		
+		task = new Task(0, 10, 0.05, 9, 11, false, new ArrayList<>());
+		Assert.assertTrue(logicalServer.isFeasible(task));
+
+		task = new Task(0, 10, 0.05, MEM_CAPACITY, 11, false, new ArrayList<>());
+		Assert.assertTrue(logicalServer.isFeasible(task));
+		
+		task = new Task(0, 10, 0.05, MEM_CAPACITY + 0.1, 11, false, new ArrayList<>());
+		Assert.assertFalse(logicalServer.isFeasible(task));
+				
+		// checking that logical server does not change its configuration
+		Assert.assertEquals(0.1, logicalServer.getCpuCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getFreeCPU(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getMemCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(0.1, logicalServer.getFreeMem(), ACCEPTABLE_DIFF);
+	}
+	
 	@Test
 	public void testCalCpuToBeRequested() {		
 		// resource grain is 0.1

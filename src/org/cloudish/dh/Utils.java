@@ -13,13 +13,13 @@ import org.cloudish.dh.model.ResourcePool;
 
 public class Utils {
 
-	public static Map<String, List<ResourcePool>> createResourcePoolsFromHosts(List<Host> hosts) {
+	public static Map<String, List<ResourcePool>> createResourcePoolsFromHosts(List<Host> hosts, boolean isConstraintOn) {
 		Map<String, List<ResourcePool>> pools = new HashMap<>();
 		
 		pools.put(ResourcePool.CPU_TYPE, new ArrayList<>());
 		pools.put(ResourcePool.MEMORY_TYPE, new ArrayList<>());
 		
-		ResourcePool memPool = new ResourcePool(ResourcePool.MEMORY_TYPE, new HashMap<>());
+		ResourcePool memPool = new ResourcePool(ResourcePool.MEMORY_TYPE, new HashMap<>(), isConstraintOn);
 		
 		for (Host host : hosts) {
 			memPool.incorporateHost(host);
@@ -36,7 +36,7 @@ public class Utils {
 			
 			if (!hostIncorporated) {
 				Map<String, ResourceAttribute> resourceAttributes = filterCpuAttributes(host.getAttributes());
-				ResourcePool cpuPool = new ResourcePool(ResourcePool.CPU_TYPE, resourceAttributes);
+				ResourcePool cpuPool = new ResourcePool(ResourcePool.CPU_TYPE, resourceAttributes, isConstraintOn);
 				cpuPool.incorporateHost(host);
 				pools.get(ResourcePool.CPU_TYPE).add(cpuPool);
 			}

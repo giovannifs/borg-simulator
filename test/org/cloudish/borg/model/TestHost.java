@@ -1,5 +1,6 @@
 package org.cloudish.borg.model;
 
+import org.cloudish.score.KubernetesRankingScore;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -137,6 +138,7 @@ public class TestHost {
 		new Host(hostLine);
 	}
 
+	@Test
 	public void testMatch() {
 		String hostLine = "5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]";
 		Host h = new Host(hostLine);
@@ -151,9 +153,25 @@ public class TestHost {
 		Assert.assertTrue(h.match(new Task("0,0,1,0.1,0.1,11,1,[Ql,<,14;wN,==,2;Ql,>,2;rs,!=,bf]")));
 	}
 
-	public void testNotMatch() {
+	@Test
+	public void testNotMatchConstraintOn() {
 		String hostLine = "5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]";
 		Host h = new Host(hostLine);
+
+		Assert.assertFalse(h.match(new Task("0,0,1,0.1,0.1,11,1,[5d,!=,2]")));
+		Assert.assertFalse(h.match(new Task("0,0,1,0.1,0.1,11,1,[5d,<,1]")));
+		Assert.assertFalse(h.match(new Task("0,0,1,0.1,0.1,11,1,[5d,>,3]")));
+		Assert.assertFalse(h.match(new Task("0,0,1,0.1,0.1,11,1,[5d,!=,0;5d,>,3]")));
+
+		Assert.assertFalse(h.match(new Task("0,0,1,0.1,0.1,11,1,[GK,==,Ln;By,>,1;w3,<,9;w3,>,7]")));
+		Assert.assertFalse(h.match(new Task("0,0,1,0.1,0.1,11,1,[nU,==,2;w3,<,9;w3,>,2;Ql,>,0;Ql,<,2]")));
+		Assert.assertFalse(h.match(new Task("0,0,1,0.1,0.1,11,1,[Ql,<,14;wN,!=,2;Ql,>,2;rs,!=,bf]")));
+	}
+	
+	@Test
+	public void testNotMatchConstraintOff() {
+		String hostLine = "5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]";
+		Host h = new Host(hostLine, new KubernetesRankingScore(), false);
 
 		Assert.assertTrue(h.match(new Task("0,0,1,0.1,0.1,11,1,[5d,!=,2]")));
 		Assert.assertTrue(h.match(new Task("0,0,1,0.1,0.1,11,1,[5d,<,1]")));

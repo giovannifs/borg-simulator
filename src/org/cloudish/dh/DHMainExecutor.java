@@ -35,8 +35,11 @@ public class DHMainExecutor {
 		createOutputDir(outputDir);
 		
 		List<Host> hosts = createHosts(infraFilePath);
+		
+		boolean isConstraintsOn = properties.getProperty("placement_constraints_on") == null
+				|| properties.getProperty("placement_constraints_on").equals("yes") ? true : false;
 
-		Map<String, List<ResourcePool>> resourcePools = Utils.createResourcePoolsFromHosts(hosts);
+		Map<String, List<ResourcePool>> resourcePools = Utils.createResourcePoolsFromHosts(hosts, isConstraintsOn);
 		
 		System.out.println("How many MemPool? " + resourcePools.get(ResourcePool.MEMORY_TYPE).size());
 		System.out.println("MemPool size: " + resourcePools.get(ResourcePool.MEMORY_TYPE).get(0).getCapacity());

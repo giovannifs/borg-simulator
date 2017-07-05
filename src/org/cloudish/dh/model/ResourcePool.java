@@ -21,6 +21,8 @@ public class ResourcePool {
 	private double capacity;
 	private double freeCapacity;
 	private Map<String, ResourceAttribute> attributes = new HashMap<>();
+	private boolean isConstraintOn;
+	
 	@SuppressWarnings("serial")
 	public static final List<String> CPU_ATTRIBUTES = new ArrayList<String>() {{
 		add("9e");
@@ -37,15 +39,20 @@ public class ResourcePool {
 	
 	// 5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]
 	public ResourcePool(String poolType, Map<String, ResourceAttribute> attributes) {
-		this(poolType, 0, attributes);
+		this(poolType, 0, attributes, true);
+	}
+	
+	public ResourcePool(String poolType, Map<String, ResourceAttribute> attributes, boolean isConstraintOn) {
+		this(poolType, 0, attributes, isConstraintOn);
 	}
 
-	public ResourcePool(String poolType, double capacity, Map<String, ResourceAttribute> attributes) {
+	public ResourcePool(String poolType, double capacity, Map<String, ResourceAttribute> attributes, boolean isConstraintOn) {
 		this.poolType = poolType;
 		this.capacity = capacity;
 		this.freeCapacity = capacity;
 
 		this.attributes = attributes;
+		this.isConstraintOn = isConstraintOn;
 		
 		if (poolType.equals(CPU_TYPE)) {
 			String cpuAttr = "";
@@ -67,21 +74,23 @@ public class ResourcePool {
 			return true;
 		}
 		
-		// constraints are related only with CPU pools
-		if (poolType.equals(CPU_TYPE)) {
-			for (TaskConstraint constraint : task.getConstraints()) {
-				
-				/*
-				 * Ignoring GK and Ql attribute, these are treated by logical server
-				 */
-				if (!"GK".equals(constraint.getAttName()) && !"Ql".equals(constraint.getAttName())) {
-					ResourceAttribute resourceAtt = attributes.get(constraint.getAttName());
+		if (isConstraintOn) {
+			// constraints are related only with CPU pools
+			if (poolType.equals(CPU_TYPE)) {
+				for (TaskConstraint constraint : task.getConstraints()) {
 					
-					if (resourceAtt == null || !resourceAtt.match(constraint)) {
-						return false;
+					/*
+					 * Ignoring GK and Ql attribute, these are treated by logical server
+					 */
+					if (!"GK".equals(constraint.getAttName()) && !"Ql".equals(constraint.getAttName())) {
+						ResourceAttribute resourceAtt = attributes.get(constraint.getAttName());
+						
+						if (resourceAtt == null || !resourceAtt.match(constraint)) {
+							return false;
+						}
 					}
-				}
-			}			
+				}			
+			}
 		}
 
 		return true;
@@ -114,6 +123,10 @@ public class ResourcePool {
 
 	public double getFreeCapacity() {
 		return freeCapacity;
+	}
+	
+	public boolean isConstraintOn() {
+		return isConstraintOn;
 	}
 
 	public Map<String, ResourceAttribute> getAttributes() {

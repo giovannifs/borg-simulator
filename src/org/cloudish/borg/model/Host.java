@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import org.cloudish.dh.Utils;
 import org.cloudish.dh.model.Server;
 import org.cloudish.score.KubernetesRankingScore;
 import org.cloudish.score.RankingScore;
@@ -12,17 +13,19 @@ public class Host extends Server {
 
 	private long id;
 	private String hostLine;
+	private boolean isConstraintOn;
 	private Map<String, ResourceAttribute> attributes = new HashMap<>();
 
 	public Host(String line) {
-		this(line, new KubernetesRankingScore());
+		this(line, new KubernetesRankingScore(), true);
 	}
 	
 	//	#%% Format: {host_id,host_name,cpu_capacity,mem_capacity,rs,0/,Ql,maq}
 	//	#{0,"Host_1",8,16,[{"rs","1"},{"o/","1"},{"Ql","1"},{"ma","1"}]}.
 	//	5,Host_5,0.5,0.2493,[5d,2;9e,2;By,4;GK,Ap;Ju,1;Ql,3;UX,2;ma,2;nU,2;nZ,2;rs,Fh;w3,4;wN,2;o/,0;P8,0]
-	public Host(String line, RankingScore rankingScore) {
+	public Host(String line, RankingScore rankingScore, boolean isConstraintOn) {
 		this.hostLine = line;
+		this.isConstraintOn = isConstraintOn;
 		
 		StringTokenizer st = new StringTokenizer(line, "[");
 
@@ -54,13 +57,18 @@ public class Host extends Server {
 		}
 	}
 	
-	public Host(long id, double cpuCapacity, double memCapacity,
-			RankingScore rankingScore, Map<String, ResourceAttribute> attributes) {
-		this(id, cpuCapacity, cpuCapacity, memCapacity, memCapacity, rankingScore, attributes);
+	public Host(long id, double cpuCapacity, double memCapacity, RankingScore rankingScore,
+			Map<String, ResourceAttribute> attributes) {
+		this(id, cpuCapacity, cpuCapacity, memCapacity, memCapacity, rankingScore, attributes, true);
 	}
 	
-	private Host(long id, double cpuCapacity, double freeCPU, double memCapacity, double freeMem, RankingScore rankingScore,
-			Map<String, ResourceAttribute> attributes) {
+	public Host(long id, double cpuCapacity, double memCapacity, RankingScore rankingScore,
+			Map<String, ResourceAttribute> attributes, boolean isConstraint) {
+		this(id, cpuCapacity, cpuCapacity, memCapacity, memCapacity, rankingScore, attributes, isConstraint);
+	}
+
+	private Host(long id, double cpuCapacity, double freeCPU, double memCapacity, double freeMem,
+			RankingScore rankingScore, Map<String, ResourceAttribute> attributes, boolean isConstraint) {
 		this.id = id;
 		this.cpuCapacity = cpuCapacity;
 		this.freeCPU = freeCPU;
@@ -84,26 +92,31 @@ public class Host extends Server {
     }
 
 	protected boolean match(Task task) {
-		if (jidAllocated.contains(task.getJid())) {
-			return false;
-		}
-		
-		for (TaskConstraint constraint : task.getConstraints()) {
-			ResourceAttribute hostAtt = attributes.get(constraint.getAttName());
-			
-			if (hostAtt == null || !hostAtt.match(constraint)) {
+		if (isConstraintOn()) {
+			if (jidAllocated.contains(task.getJid())) {
 				return false;
-			}			
+			}
+			
+			for (TaskConstraint constraint : task.getConstraints()) {
+				ResourceAttribute hostAtt = attributes.get(constraint.getAttName());
+				
+				if (hostAtt == null || !hostAtt.match(constraint)) {
+					return false;
+				}			
+			}
 		}
+	
 		return true;
 	}
 
 	public void allocate(Task task) {
-		freeCPU = freeCPU - task.getCpuReq();
-		freeMem = freeMem - task.getMemReq();
+		freeCPU = Utils.format(freeCPU - task.getCpuReq());
+		freeMem = Utils.format(freeMem - task.getMemReq());
 
-		if (task.isAntiAffinity()) {
-			jidAllocated.add(task.getJid());		
+		if (isConstraintOn()) {
+			if (task.isAntiAffinity()) {
+				jidAllocated.add(task.getJid());		
+			}
 		}
 	}
 
@@ -118,9 +131,13 @@ public class Host extends Server {
 	public Map<String, ResourceAttribute> getAttributes() {
 		return attributes;
 	}
-	
+		
+	public boolean isConstraintOn() {
+		return isConstraintOn;
+	}
+
 	public Host clone() {
 		return new Host(getId(), getCpuCapacity(), getFreeCPU(), getMemCapacity(), getFreeMem(), getRankingScore(),
-				getAttributes());
+				getAttributes(), isConstraintOn());
 	}
 }

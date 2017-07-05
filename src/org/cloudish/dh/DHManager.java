@@ -69,7 +69,7 @@ public class DHManager {
 		}
 		
 		return new LogicalServer(cpuPool, memPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
-				getCpuResourceGrain(), getMemResourceGrain(), this);
+				getCpuResourceGrain(), getMemResourceGrain(), this, isConstraintsOn());
 	}
 
 	private ResourcePool chooseCpuPoolRandomly() {
@@ -246,22 +246,9 @@ public class DHManager {
 	public Map<String, LogicalServer> getPossibleGKValues() {
 		return possibleGKValues;
 	}
-
-	public void createMinimumLogicalServer() {
-		// TODO Auto-generated method stub
-		
-//		There is also an assembling constraint on the whole DH-based infrastructure that defines a minimum number of logical servers. This is treated a posteriori. When all tasks have been scheduled, the following algorithm is executed.
-//
-//		While the minimum number of logical servers is not reached, do:
-//
-//		--- Select the logical server with the worse performance (regarding the evaluation metric)
-//
-//		--- Divide this logical server in two, each with the minimal capacity possible, and using CPU components from the CPU pool originally used by the logical server that has been divided
-//
-//		--- Return all the leftover components to their respective pools
-//
-//		--- Use the same algorithm in the main loop to reschedule the tasks that were allocated in the logical server that was divided but considering only the two logical servers that have been created
-		
+	
+	public boolean isConstraintsOn() {
+		return constraintsOn;
 	}
 
 	public boolean isGKValueAvailable(String GKValue) {

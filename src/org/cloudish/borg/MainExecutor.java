@@ -15,6 +15,7 @@ import java.util.Random;
 
 import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.Task;
+import org.cloudish.score.KubernetesRankingScore;
 
 public class MainExecutor {
 	
@@ -40,7 +41,10 @@ public class MainExecutor {
 			throw new IllegalArgumentException("number_of_host_permutations property must be a positive value.");
 		}
 		
-		List<Host> hosts = createHosts(infraFilePath);		
+		boolean isConstraintsOn = properties.getProperty("placement_constraints_on") == null
+				|| properties.getProperty("placement_constraints_on").equals("yes") ? true : false;
+		
+		List<Host> hosts = createHosts(infraFilePath, isConstraintsOn);		
 		
 		// allocating in all hosts - without cluster compaction
 		System.out.println("Allocating considering all " + hosts.size() + " hosts...");
@@ -231,14 +235,14 @@ public class MainExecutor {
 		writer.close();
 	}
 
-	private static List<Host> createHosts(String infraFilePath) throws IOException {
+	private static List<Host> createHosts(String infraFilePath, boolean isConstraintOn) throws IOException {
 		List<Host> hosts = new ArrayList<Host>();
 		
 		BufferedReader br = new BufferedReader(new FileReader(infraFilePath));
 		try {
 		    String line = br.readLine();
 		    while (line != null) {
-		    	hosts.add(new Host(line));
+		    	hosts.add(new Host(line, new KubernetesRankingScore(), isConstraintOn));
 		    	line = br.readLine();
 		    }
 		} finally {

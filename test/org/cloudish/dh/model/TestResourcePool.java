@@ -29,7 +29,7 @@ public class TestResourcePool {
 		
 		Map<String, ResourceAttribute> hostAttributes = createResourceAttributes();
 		
-		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes);
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes, true);
 		
 		Assert.assertTrue(pool.match(host));
 	}
@@ -40,7 +40,7 @@ public class TestResourcePool {
 		
 		Map<String, ResourceAttribute> hostAttributes = createResourceAttributes();
 		
-		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes);
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes, true);
 		host.getAttributes().put("9e", new ResourceAttribute("9e", "1"));
 		
 		Assert.assertFalse(pool.match(host));
@@ -52,7 +52,7 @@ public class TestResourcePool {
 		
 		Map<String, ResourceAttribute> hostAttributes = createResourceAttributes();
 		
-		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes);
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes, true);
 		host.getAttributes().put("St", new ResourceAttribute("St", "1"));
 		
 		Assert.assertFalse(pool.match(host));
@@ -64,7 +64,7 @@ public class TestResourcePool {
 		
 		Map<String, ResourceAttribute> hostAttributes = createResourceAttributes();
 		
-		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes);
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes, true);
 		host.getAttributes().put("Ql", new ResourceAttribute("Ql", "5"));
 		host.getAttributes().put("GK", new ResourceAttribute("GK", "Al"));
 		
@@ -77,7 +77,7 @@ public class TestResourcePool {
 		
 		Map<String, ResourceAttribute> hostAttributes = createResourceAttributes();
 		
-		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes);
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes, true);
 		Assert.assertTrue(pool.match(host));
 		
 		// different value
@@ -116,8 +116,8 @@ public class TestResourcePool {
 	}
 	
 	@Test
-	public void testIsFeasibleWithConstraint() {
-		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes);
+	public void testIsFeasibleWithConstraintOn() {
+		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes, true);
 
 		// scenario 1
 		ArrayList<TaskConstraint> constraints = new ArrayList<>();
@@ -157,10 +157,50 @@ public class TestResourcePool {
 	}
 	
 	@Test
+	public void testIsFeasibleWithConstraintOff() {
+		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes, false);
+
+		// scenario 1
+		ArrayList<TaskConstraint> constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("9e", "==", "2"));
+		constraints.add(new TaskConstraint("w5", ">", "0"));
+		
+		Task task = new Task(0, 10, 0.5, 0.5, 11, true, constraints);
+		
+		Assert.assertTrue(pool.isFeasible(task));
+		
+		// scenario 2
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("9e", "!=", "1"));
+		constraints.add(new TaskConstraint("w5", ">", "0"));
+		constraints.add(new TaskConstraint("rs", "==", "0"));
+		constraints.add(new TaskConstraint("w2", "!=", "0"));
+		
+		task = new Task(0, 10, 0.5, 0.5, 11, true, constraints);
+		
+		Assert.assertTrue(pool.isFeasible(task));
+
+		// scenario 3
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("9e", "==", "1"));
+		
+		task = new Task(0, 10, 0.5, 0.5, 11, true, constraints);
+		
+		Assert.assertTrue(pool.isFeasible(task));
+
+		// scenario 4 (non existing attribute in the pool)
+		constraints = new ArrayList<>();
+		constraints.add(new TaskConstraint("St", "==", "1"));
+		
+		task = new Task(0, 10, 0.5, 0.5, 11, true, constraints);
+		
+		Assert.assertTrue(pool.isFeasible(task));
+	}
+	@Test
 	public void testIsFeasibleAndHasMoreResource() {
 		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes);
 	
-		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), poolAttributes);
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), poolAttributes, true);
 		
 		Assert.assertTrue(pool.match(host));
 		pool.incorporateHost(host);
@@ -187,6 +227,4 @@ public class TestResourcePool {
 		Assert.assertTrue(pool.isFeasible(task));
 		Assert.assertFalse(pool.hasMoreResource(task.getCpuReq()));
 	}
-
-
 }

@@ -22,11 +22,12 @@ public class LogicalServer extends Server {
 	private List<String> notAllowedGKAttr;
 	private int minAllowedQlAtt;
 	private int maxAllowedQlAtt;
+	private boolean isConstraintOn;
 	private DHManager dhManager;
 	
 
 	public LogicalServer(ResourcePool cpuPool, ResourcePool memPool, double maxCPUCapacity,
-			double maxMemCapacity, double cpuResourceGrain, double memResourceGrain, DHManager dhManager) {
+			double maxMemCapacity, double cpuResourceGrain, double memResourceGrain, DHManager dhManager, boolean isConstraintOn) {
 		this.cpuPool = cpuPool;
 		this.memPool = memPool;
 		this.maxCpuCapacity = maxCPUCapacity;
@@ -34,6 +35,7 @@ public class LogicalServer extends Server {
 		this.cpuResourceGrain = cpuResourceGrain;
 		this.memResourceGrain = memResourceGrain;
 		this.dhManager = dhManager;
+		this.isConstraintOn = isConstraintOn;
 		
 		// creating minimal logical server 
 		getCpuPool().allocate(getCpuResourceGrain());
@@ -72,28 +74,30 @@ public class LogicalServer extends Server {
 		return rankingScore.calculateScore(task, this);
 	}
 
-	protected boolean isFeasible(Task task) {		
-		if (jidAllocated.contains(task.getJid())) {
+	protected boolean isFeasible(Task task) {
+		if (isConstraintOn) {
+			if (jidAllocated.contains(task.getJid())) {
 //			System.out.println("Logical Server is not feasible because of antiaffinity constraint.");
-			return false;
-		}
-
-		// check if the resource pools are feasible for task
-		if (!cpuPool.isFeasible(task) || !memPool.isFeasible(task)) {
+				return false;
+			}
+			
+			// check if the resource pools are feasible for task
+			if (!cpuPool.isFeasible(task) || !memPool.isFeasible(task)) {
 //			System.out.println("Logical Server is not feasible because of pool attributes.");
-			return false;
-		}
-		
-		// checking feasibility of GK attribute
-		if (!checkGKAttrFeasibility(task)) {
+				return false;
+			}
+			
+			// checking feasibility of GK attribute
+			if (!checkGKAttrFeasibility(task)) {
 //			System.out.println("Logical Server is not feasible because of GK constraint.");
-			return false;
-		}
-
-		// checking feasibility of Ql attribute
-		if (!checkQlAttrFeasibility(task)) {
+				return false;
+			}
+			
+			// checking feasibility of Ql attribute
+			if (!checkQlAttrFeasibility(task)) {
 //			System.out.println("Logical Server is not feasible because of Ql constraint.");
-			return false;
+				return false;
+			}
 		}
 		
 		// check if logical server needs to be scaled up
@@ -233,13 +237,15 @@ public class LogicalServer extends Server {
 		freeCPU = Utils.format(freeCPU - task.getCpuReq());
 		freeMem = Utils.format(freeMem - task.getMemReq());
 		
-		if (task.isAntiAffinity()) {
-			jidAllocated.add(task.getJid());		
+		if (isConstraintOn()) {
+			if (task.isAntiAffinity()) {
+				jidAllocated.add(task.getJid());		
+			}
+			
+			// treat GK and Ql attributes
+			treatGKAttr(task);
+			treatQlAttr(task);
 		}
-		
-		// treat GK and Ql attributes
-		treatGKAttr(task);
-		treatQlAttr(task);
 
 		// asserting assumptions 
 		if (cpuCapacity > maxCpuCapacity || memCapacity > maxMemCapacity) {
@@ -359,8 +365,15 @@ public class LogicalServer extends Server {
 
 	protected void setMaxMemCapacity(double maxMemCapacity) {
 		this.maxMemCapacity = maxMemCapacity;
-	}	
+	}
+
+	public boolean isConstraintOn() {
+		return isConstraintOn;
+	}
 	
+	protected void setConstraintOn(boolean isConstraintOn) {
+		this.isConstraintOn = isConstraintOn;
+	}	
 }
 
 class FakeScaledUpServer extends Server {

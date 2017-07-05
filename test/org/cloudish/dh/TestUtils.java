@@ -42,11 +42,11 @@ public class TestUtils {
 	
 	@Test
 	public void testCreateResourcePoolsHostsWithoutAttr() {
-		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), new HashMap<>());
+		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), new HashMap<>(), true);
 		
-		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), new HashMap<>());
+		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), new HashMap<>(), true);
 		
-		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), new HashMap<>());
+		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), new HashMap<>(), true);
 		
 		List<Host> hosts = new ArrayList<>();
 		hosts.add(host1);
@@ -54,7 +54,7 @@ public class TestUtils {
 		hosts.add(host3);
 
 		// checking if pools are created correctly
-		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts);
+		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts, true);
 		
 		// memory pool
 		List<ResourcePool> memPools = pools.get(ResourcePool.MEMORY_TYPE);
@@ -73,11 +73,11 @@ public class TestUtils {
 	
 	@Test
 	public void testCreateResourcePoolsHostsWithSameAttrAndDiffValues() {
-		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1);
+		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1, true);
 		
-		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2);
+		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2, true);
 
-		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3);
+		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3, true);
 		
 		List<Host> hosts = new ArrayList<>();
 		hosts.add(host1);
@@ -85,7 +85,7 @@ public class TestUtils {
 		hosts.add(host3);
 
 		// checking if pools are created correctly
-		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts);
+		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts, true);
 		
 		// memory pool
 		List<ResourcePool> memPools = pools.get(ResourcePool.MEMORY_TYPE);
@@ -134,19 +134,19 @@ public class TestUtils {
 	
 	@Test
 	public void testCreateResourcePoolsHostsWithSameAttrAndValues() {
-		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1);
+		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1, true);
 		
 		attributes2.get("9e").setAttValue("value1");
 		attributes2.get("rs").setAttValue("value1");
 		attributes2.get("nZ").setAttValue("value1");
 		
-		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2);
+		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2, true);
 
 		attributes3.get("9e").setAttValue("value1");
 		attributes3.get("rs").setAttValue("value1");
 		attributes3.get("nZ").setAttValue("value1");
 		
-		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3);
+		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3, true);
 		
 		List<Host> hosts = new ArrayList<>();
 		hosts.add(host1);
@@ -154,7 +154,7 @@ public class TestUtils {
 		hosts.add(host3);
 
 		// checking if pools are created correctly
-		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts);
+		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts, true);
 		
 		// memory pool
 		List<ResourcePool> memPools = pools.get(ResourcePool.MEMORY_TYPE);
@@ -174,14 +174,14 @@ public class TestUtils {
 	
 	@Test
 	public void testCreateResourcePoolsHostsWithExtraNonCpuAttrAttrAndSameValues() {
-		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1);
+		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1, true);
 		
 		attributes2.get("9e").setAttValue("value1");
 		attributes2.get("rs").setAttValue("value1");
 		attributes2.get("nZ").setAttValue("value1");
 		attributes2.put("GK", new ResourceAttribute("GK","Al"));
 
-		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2);
+		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2, true);
 
 		attributes3.get("9e").setAttValue("value1");
 		attributes3.get("rs").setAttValue("value1");
@@ -189,7 +189,7 @@ public class TestUtils {
 		attributes2.put("Qh", new ResourceAttribute("Qh","2"));
 
 		
-		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3);
+		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3, true);
 		
 		List<Host> hosts = new ArrayList<>();
 		hosts.add(host1);
@@ -197,7 +197,7 @@ public class TestUtils {
 		hosts.add(host3);
 
 		// checking if pools are created correctly
-		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts);
+		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts, true);
 		
 		// memory pool
 		List<ResourcePool> memPools = pools.get(ResourcePool.MEMORY_TYPE);
@@ -217,21 +217,21 @@ public class TestUtils {
 	
 	@Test
 	public void testCreateResourcePoolsHostsWithDiffAttr() {
-		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1);
+		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1, true);
 		
 		Map<String, ResourceAttribute> otherAttributes = new HashMap<>();
 		otherAttributes.put("St", new ResourceAttribute("St", "value1"));
 		otherAttributes.put("By", new ResourceAttribute("By", "value1"));
 		otherAttributes.put("P8", new ResourceAttribute("P8", "value1"));
 		
-		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), otherAttributes);
+		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), otherAttributes, true);
 
 		Map<String, ResourceAttribute> otherAttributes2 = new HashMap<>();
 		otherAttributes2.put("o/", new ResourceAttribute("o/", "value1"));
 		otherAttributes2.put("w2", new ResourceAttribute("w2", "value1"));
 		otherAttributes2.put("wN", new ResourceAttribute("wN", "value1"));
 		
-		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), otherAttributes2);
+		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), otherAttributes2, true);
 		
 		List<Host> hosts = new ArrayList<>();
 		hosts.add(host1);
@@ -239,7 +239,7 @@ public class TestUtils {
 		hosts.add(host3);
 
 		// checking if pools are created correctly
-		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts);
+		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts, true);
 		
 		// memory pool
 		List<ResourcePool> memPools = pools.get(ResourcePool.MEMORY_TYPE);
@@ -289,13 +289,13 @@ public class TestUtils {
 	public void testCreateResourcePoolsHostsWithExtraNonCpuAttrAndDiffValues() {
 		
 		attributes1.put("Ql", new ResourceAttribute("Ql","15"));				
-		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1);
+		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1, true);
 		
 		attributes2.put("GK", new ResourceAttribute("GK","Al"));
-		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2);
+		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2, true);
 
 		attributes3.put("Qh", new ResourceAttribute("Qh","3"));
-		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3);
+		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3, true);
 		
 		List<Host> hosts = new ArrayList<>();
 		hosts.add(host1);
@@ -303,7 +303,7 @@ public class TestUtils {
 		hosts.add(host3);
 
 		// checking if pools are created correctly
-		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts);
+		Map<String, List<ResourcePool>> pools = Utils.createResourcePoolsFromHosts(hosts, true);
 		
 		// memory pool
 		List<ResourcePool> memPools = pools.get(ResourcePool.MEMORY_TYPE);
@@ -352,12 +352,12 @@ public class TestUtils {
 	@Test
 	public void testGetGKValues() {
 		attributes1.put("GK", new ResourceAttribute("GK","Tu"));				
-		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1);
+		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1, true);
 		
 		attributes2.put("GK", new ResourceAttribute("GK","Al"));
-		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2);
+		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2, true);
 
-		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3);
+		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3, true);
 		
 		List<Host> hosts = new ArrayList<>();
 		hosts.add(host1);
@@ -373,11 +373,11 @@ public class TestUtils {
 
 	@Test
 	public void testGetGKValuesWithoutGK() {
-		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1);
+		Host host1 = new Host(1, 10, 10, new KubernetesRankingScore(), attributes1, true);
 		
-		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2);
+		Host host2 = new Host(2, 20, 20, new KubernetesRankingScore(), attributes2, true);
 
-		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3);
+		Host host3 = new Host(3, 30, 30, new KubernetesRankingScore(), attributes3, true);
 		
 		List<Host> hosts = new ArrayList<>();
 		hosts.add(host1);
