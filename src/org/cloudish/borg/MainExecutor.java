@@ -46,6 +46,8 @@ public class MainExecutor {
 		
 		List<Host> hosts = createHosts(infraFilePath, isConstraintsOn);		
 		
+		System.out.println("isConstraintOn? " + (isConstraintsOn));
+		
 		// allocating in all hosts - without cluster compaction
 		System.out.println("Allocating considering all " + hosts.size() + " hosts...");
 		List<Host> chosenHosts = getFirstHosts(hosts, hosts.size());

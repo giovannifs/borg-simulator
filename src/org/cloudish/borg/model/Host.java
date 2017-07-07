@@ -68,7 +68,7 @@ public class Host extends Server {
 	}
 
 	private Host(long id, double cpuCapacity, double freeCPU, double memCapacity, double freeMem,
-			RankingScore rankingScore, Map<String, ResourceAttribute> attributes, boolean isConstraint) {
+			RankingScore rankingScore, Map<String, ResourceAttribute> attributes, boolean isConstraintOn) {
 		this.id = id;
 		this.cpuCapacity = cpuCapacity;
 		this.freeCPU = freeCPU;
@@ -76,6 +76,7 @@ public class Host extends Server {
 		this.freeMem = freeMem;
 		this.attributes = attributes;
 		this.rankingScore = rankingScore;
+		this.isConstraintOn = isConstraintOn;
 	}
 
 	public double getScore(Task task) {

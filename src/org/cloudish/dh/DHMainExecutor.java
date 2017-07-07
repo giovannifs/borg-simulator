@@ -39,6 +39,8 @@ public class DHMainExecutor {
 		boolean isConstraintsOn = properties.getProperty("placement_constraints_on") == null
 				|| properties.getProperty("placement_constraints_on").equals("yes") ? true : false;
 
+		System.out.println("isConstraintOn? " + (isConstraintsOn));
+		
 		Map<String, List<ResourcePool>> resourcePools = Utils.createResourcePoolsFromHosts(hosts, isConstraintsOn);
 		
 		System.out.println("How many MemPool? " + resourcePools.get(ResourcePool.MEMORY_TYPE).size());
