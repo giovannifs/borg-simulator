@@ -56,8 +56,8 @@ public class MainExecutor {
 		long numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
 		double pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
 		
-		saveHostInfo(outputDir, chosenHosts);
-		savePendingQueueInfo(outputDir, chosenHosts, pendingQueue);
+		saveOutput(outputDir, chosenHosts, isConstraintsOn, pendingQueue);
+//		savePendingQueueInfo(outputDir, chosenHosts, pendingQueue);
 		
 		System.out.println("hosts=" + chosenHosts.size());
 		System.out.println("pending-queue-tasks=" + pendingQueue.size());
@@ -102,8 +102,8 @@ public class MainExecutor {
 					numberOfTasks = allocateTasks(workloadFilePath, chosenHosts, pendingQueue);
 					pendingQueueFraction = new Double(pendingQueue.size())/new Double(numberOfTasks);
 					
-					saveHostInfo(permutationOutDir, chosenHosts);
-					savePendingQueueInfo(permutationOutDir, chosenHosts, pendingQueue);
+					saveOutput(permutationOutDir, chosenHosts, isConstraintsOn, pendingQueue);
+//					savePendingQueueInfo(permutationOutDir, chosenHosts, pendingQueue);
 					
 					System.out.println("scenario " + permutation + " round " + permutationIndex+ " - pending-queue-tasks=" + pendingQueue.size());
 					System.out.println("scenario " + permutation + " round " + permutationIndex+ " - pending-queue-fraction=" + pendingQueueFraction);
@@ -156,16 +156,16 @@ public class MainExecutor {
 		return firstHosts;
 	}
 
-	private static void savePendingQueueInfo(String outputDir, List<Host> chosenHosts, List<Task> pendingQueue)
-			throws FileNotFoundException, UnsupportedEncodingException {
-		PrintWriter writer = new PrintWriter(
-				outputDir + "/pending-queue-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
-		writer.println("tid,jid,cpuReq,memReq,priority");
-		for (Task task : pendingQueue) {
-			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + "," + task.getPriority());
-		}
-		writer.close();
-	}
+//	private static void savePendingQueueInfo(String outputDir, List<Host> chosenHosts, List<Task> pendingQueue)
+//			throws FileNotFoundException, UnsupportedEncodingException {
+//		PrintWriter writer = new PrintWriter(
+//				outputDir + "/pending-queue-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
+//		writer.println("tid,jid,cpuReq,memReq,priority");
+//		for (Task task : pendingQueue) {
+//			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + "," + task.getPriority());
+//		}
+//		writer.close();
+//	}
 
 	private static long allocateTasks(String workloadFilePath, List<Host> chosenHosts, List<Task> pendingQueue)
 			throws FileNotFoundException, IOException {
@@ -225,16 +225,33 @@ public class MainExecutor {
 		return taskIndex;
 	}
 
-	private static void saveHostInfo(String outputDir, List<Host> chosenHosts)
+	private static void saveOutput(String outputDir, List<Host> chosenHosts, boolean isConstraintOn, List<Task> pendingQueue)
 			throws FileNotFoundException, UnsupportedEncodingException {
 		// generating host outputs
-		PrintWriter writer = new PrintWriter(outputDir + "/allocation-" + chosenHosts.size() + "-hosts.csv", "UTF-8");
+		String constraint = "";
+		if (isConstraintOn) {
+			constraint = "on";
+		} else {
+			constraint = "off";
+		}
+		
+		PrintWriter writer = new PrintWriter(outputDir + "/allocation-" + constraint + "-"+ chosenHosts.size() + "-hosts.csv", "UTF-8");
 		writer.println("hostId,cpuCapacity,freeCpu,memCapacity,freeMem");
 		for (Host host : chosenHosts) {
 			writer.println(host.getId() + "," + host.getCpuCapacity() + "," + host.getFreeCPU() + ","
 					+ host.getMemCapacity() + "," + host.getFreeMem());
 		}
 		writer.close();
+		
+		// saving pending queue
+		writer = new PrintWriter(
+				outputDir + "/pending-queue-" + constraint + "-"+ chosenHosts.size() + "-hosts.csv", "UTF-8");
+		writer.println("tid,jid,cpuReq,memReq,priority");
+		for (Task task : pendingQueue) {
+			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + "," + task.getPriority());
+		}
+		writer.close();
+
 	}
 
 	private static List<Host> createHosts(String infraFilePath, boolean isConstraintOn) throws IOException {

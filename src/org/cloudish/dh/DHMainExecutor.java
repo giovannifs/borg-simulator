@@ -92,8 +92,8 @@ public class DHMainExecutor {
 
 		double pendingQueueFraction = new Double(dhManager.getPendingQueue().size())/new Double(numberOfTasks);
 
-		 saveLogicalServerInfo(outputDir, dhManager.getLogicalServers());
-		 savePendingQueueInfo(outputDir, dhManager);
+		 saveOutput(properties, outputDir, dhManager);
+//		 savePendingQueueInfo(outputDir, dhManager);
 
 		System.out.println("logical-servers=" + dhManager.getLogicalServers().size());
 		System.out.println("pending-queue-tasks=" + dhManager.getPendingQueue().size());
@@ -106,7 +106,7 @@ public class DHMainExecutor {
 	private static void createOutputDir(String outputDir) {
 		File outputDirFile = new File(outputDir);
 		if (!outputDirFile.exists() || !outputDirFile.isDirectory()) {
-			outputDirFile.mkdir();
+			outputDirFile.mkdirs();
 		}
 	}
 
@@ -127,27 +127,50 @@ public class DHMainExecutor {
 		return hosts;
 	}
 	
-	private static void saveLogicalServerInfo(String outputDir, List<LogicalServer> logicalServers)
+	private static void saveOutput(Properties properties, String outputDir, DHManager dhManager)
 			throws FileNotFoundException, UnsupportedEncodingException {
+		
 		// generating host outputs
-		PrintWriter writer = new PrintWriter(outputDir + "/allocation-" + logicalServers.size() + "-logicalservers.csv", "UTF-8");
+		int nLogicalServers = dhManager.getLogicalServers().size();
+		String isConstraintsOn = properties.getProperty("placement_constraints_on") == null
+				|| properties.getProperty("placement_constraints_on").equals("yes") ? "on" : "off";
+
+		String minLogicalServer = properties.getProperty("min_logical_servers");
+		String maxCpuServerCapacity = properties.getProperty("max_cpu_logical_server_capacity");
+		String maxMemServerCapacity = properties.getProperty("max_memory_logical_server_capacity");
+		
+		PrintWriter writer = new PrintWriter(outputDir + "/allocation-" + isConstraintsOn + "-" + minLogicalServer + "-"
+				+ maxCpuServerCapacity + "-" + maxMemServerCapacity + "-" + nLogicalServers + "-servers.csv", "UTF-8");
 		writer.println("cpuPoolId,cpuCapacity,freeCpu,memCapacity,freeMem,gkAttr,QlAttr");
-		for (LogicalServer logicalServer : logicalServers) {
+		for (LogicalServer logicalServer : dhManager.getLogicalServers()) {
 			writer.println(logicalServer.getCpuPool().getId() + "," + logicalServer.getCpuCapacity() + ","
 					+ logicalServer.getFreeCPU() + "," + logicalServer.getMemCapacity() + ","
 					+ logicalServer.getFreeMem() + "," + logicalServer.getGKAttr() + "," + logicalServer.getQlAttr());
 		}
 		writer.close();
-	}
-	
-	private static void savePendingQueueInfo(String outputDir, DHManager dhManager)
-			throws FileNotFoundException, UnsupportedEncodingException {
-		PrintWriter writer = new PrintWriter(
-				outputDir + "/pending-queue-" + dhManager.getLogicalServers().size() + "-logicalservers.csv", "UTF-8");
+		
+		//writing pending queue
+		writer = new PrintWriter(outputDir + "/pending-queue-" + isConstraintsOn + "-" + minLogicalServer + "-"
+				+ maxCpuServerCapacity + "-" + maxMemServerCapacity + "-" + nLogicalServers + "-servers.csv", "UTF-8");
 		writer.println("tid,jid,cpuReq,memReq,priority");
 		for (Task task : dhManager.getPendingQueue()) {
-			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + "," + task.getPriority());
+			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + ","
+					+ task.getPriority());
 		}
 		writer.close();
 	}
+	
+//	private static void savePendingQueueInfo(String outputDir, DHManager dhManager)
+//			throws FileNotFoundException, UnsupportedEncodingException {
+//		
+//		
+//		
+//		PrintWriter writer = new PrintWriter(
+//				outputDir + "/pending-queue-" + dhManager.getLogicalServers().size() + "-logicalservers.csv", "UTF-8");
+//		writer.println("tid,jid,cpuReq,memReq,priority");
+//		for (Task task : dhManager.getPendingQueue()) {
+//			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + "," + task.getPriority());
+//		}
+//		writer.close();
+//	}
 }
