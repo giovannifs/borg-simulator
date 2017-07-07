@@ -134,7 +134,7 @@ public class MainExecutor {
 	private static String checkAndCreateDir(String dir) {
 		File permutationOutDirFile = new File(dir);
 		if (!permutationOutDirFile.exists() || !permutationOutDirFile.isDirectory()) {
-			permutationOutDirFile.mkdir();
+			permutationOutDirFile.mkdirs();
 		}
 		return dir;
 	}
