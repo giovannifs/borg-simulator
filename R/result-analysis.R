@@ -1,7 +1,10 @@
 library(dplyr)
 library(foreach)
+library(ggplot2)
+library("Rmisc")
 
 setwd("/local/giovanni/git/borg-simulator/")
+setwd("C:/Users/giovanni/Documents/cloudish/git/borg-simulator/")
 
 total.cloud.cpu=6603.25
 total.cloud.mem=5862.751
@@ -9,8 +12,46 @@ total.cloud.mem=5862.751
 total.tasks=136585
 total.prod.tasks=56048 
 
-# server-based
+CollectAllocationInfo <- function(csvPath) {
+  allocation <- read.csv("server-based-results/all-constraints-on-server-based/allocation-12477-hosts.csv")
+  head(allocation)
+  
+  allocation <- read.csv(csvPath)
+  allcoSummary <- allocation %>% summarise(servers=n(), infra.cpu=sum(cpuCapacity), infra.freeCpu=sum(freeCpu), cpu.fragmentation=infra.freeCpu/infra.cpu, cpu.remaing=total.cloud.cpu-infra.cpu,
+                           infra.mem=sum(memCapacity), infra.freeMem=sum(freeMem), mem.fragmentation=infra.freeMem/infra.mem, mem.remaing=infra.mem-infra.mem)
 
+  return(allocSummary)
+}
+
+CollectPendingInfo <- function(csvPath) {
+  pendingQueue <- read.csv(csvPath)
+  pendingQueue <- read.csv("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
+
+  pendSummary <- pendingQueue %>% mutate(prod=ifelse(priority>=9, 1, 0)) %>% mutate(nonprod=ifelse(priority<9, 1, 0)) %>% dplyr::summarise(tasks=n(), prod=sum(prod), nonprod.tasks=sum(nonprod), total.cpu=sum(cpuReq), total.mem=sum(memReq))
+  return(pendSummary)
+}
+
+
+allocation %>% summary()
+pendingQueueSize <- pendingQueueSB %>% summarise(n())
+pendingQueueSB %>% group_by(priority) %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
+pendingQueueFractionSB <- (pendingQueueSB %>% summarise(n()))/total.tasks
+
+
+
+CI <- tasks %>% group_by(cpuReqNor) %>% dplyr::summarise(upper = CI(availability, ci = 0.95)[1], mean = CI(availability, ci = 0.95)[2], lower = CI(availability, ci = 0.95)[3]) 
+
+head(allocation)
+t <- data.frame()
+t <- rbind(t, c(timestamp = 0, upper = CI(allocation$cpuCapacity, ci = 0.95)[1], mean = CI(allocation$cpuCapacity, ci = 0.95)[2], lower = CI(allocation$cpuCapacity, ci = 0.95)[3]))
+
+colnames(t) <- c("time", "upper", "mean", "lower")
+is.data.frame(t)
+ggplot(t, aes(x=time, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower))
+
+
+
+# server-based
 # all tasks constraint On
 allocationSB <- read.csv("server-based-results/all-constraints-on-server-based/allocation-12477-hosts.csv")
 pendingQueueSB <- read.csv("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
