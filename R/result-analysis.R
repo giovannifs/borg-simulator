@@ -7,29 +7,277 @@ setwd("/local/giovanni/git/borg-simulator/")
 setwd("C:/Users/giovanni/Documents/cloudish/git/borg-simulator/")
 
 total.cloud.cpu=6603.25
-total.cloud.mem=5862.751
+total.cloud.mem=5862.75133
 
 total.tasks=136585
 total.prod.tasks=56048 
 
 CollectAllocationInfo <- function(csvPath) {
-  allocation <- read.csv("server-based-results/all-constraints-on-server-based/allocation-12477-hosts.csv")
-  head(allocation)
+  #allocation <- read.csv("server-based-results/all-constraints-on-server-based/allocation-12477-hosts.csv")
+  #head(allocation)
   
   allocation <- read.csv(csvPath)
-  allcoSummary <- allocation %>% summarise(servers=n(), infra.cpu=sum(cpuCapacity), infra.freeCpu=sum(freeCpu), cpu.fragmentation=infra.freeCpu/infra.cpu, cpu.remaing=total.cloud.cpu-infra.cpu,
-                           infra.mem=sum(memCapacity), infra.freeMem=sum(freeMem), mem.fragmentation=infra.freeMem/infra.mem, mem.remaing=infra.mem-infra.mem)
+  allocSummary <- allocation %>% dplyr::summarise(servers=n(), infra.cpu=sum(cpuCapacity), infra.freeCpu=sum(freeCpu), cpu.fragmentation=infra.freeCpu/infra.cpu, cpu.remaing=total.cloud.cpu-infra.cpu,
+                           infra.mem=sum(memCapacity), infra.freeMem=sum(freeMem), mem.fragmentation=infra.freeMem/infra.mem, mem.remaing=total.cloud.mem-infra.mem)
 
   return(allocSummary)
 }
 
 CollectPendingInfo <- function(csvPath) {
   pendingQueue <- read.csv(csvPath)
-  pendingQueue <- read.csv("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
+  #pendingQueue <- read.csv("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
 
+  #head(pendingQueue)
   pendSummary <- pendingQueue %>% mutate(prod=ifelse(priority>=9, 1, 0)) %>% mutate(nonprod=ifelse(priority<9, 1, 0)) %>% dplyr::summarise(tasks=n(), prod=sum(prod), nonprod.tasks=sum(nonprod), total.cpu=sum(cpuReq), total.mem=sum(memReq))
   return(pendSummary)
 }
+
+CollectAllTimesSBAllocationInfo <- function(resultDir, constraintOn, allTasks) {
+  constraint <- "on"
+  
+  if (!constraintOn)
+    constraint <- "off"
+  
+  workload <- "all"
+  if (!allTasks) 
+    workload <- "prod"
+
+  allAllocation <- data_frame()
+  for (time in 0:29) {
+    print(time)
+    
+    timeAllocation <- CollectAllocationInfo(paste(resultDir,"/time",time,"/", workload, "/allocation-", constraint,"-12477-hosts.csv", sep = ""))
+
+    allAllocation <- rbind(allAllocation, timeAllocation)
+  }
+  return(allAllocation)
+}
+
+CollectAllTimesSBPendingInfo <- function(resultDir, constraintOn, allTasks) {
+  constraint <- "on"
+  
+  if (!constraintOn)
+    constraint <- "off"
+  
+  workload <- "all"
+  if (!allTasks) 
+    workload <- "prod"
+  
+  allPendingInfo <- data_frame()
+  for (time in 0:29) {
+    print(time)
+    
+    timePending <- CollectPendingInfo(paste(resultDir,"/time",time,"/", workload, "/pending-queue-", constraint,"-12477-hosts.csv", sep = ""))
+    
+    allPendingInfo <- rbind(allPendingInfo, timePending)
+  }
+  return(allPendingInfo)
+}
+
+
+CollectAllTimesDHAllocationInfo <- function(resultDir, constraintOn, allTasks = T, serverSize, minServers) {
+  constraint <- "on"
+  if (!constraintOn)
+    constraint <- "off"
+  
+  allAllocation <- data_frame()
+  
+  for (time in 0:29) {
+    print(paste("Time ", time), sep= "")
+    timeResultDir <- paste(resultDir, "/time", time, "/", sep = "")
+    prefixFileName <- paste("allocation-", constraint,"-", minServers, "-", serverSize, "-", serverSize, "-", sep = "")
+    
+    if (!allTasks) {
+      timeResultDir <- paste(timeResultDir, "prod/")
+    }
+    
+    for (fileName in list.files(path = timeResultDir)) {
+      
+      if (startsWith(fileName, prefixFileName)) {
+        print(paste("Collecting allocation info from file:", fileName))
+        
+        timeAllocation <- CollectAllocationInfo(paste(timeResultDir,fileName, sep = ""))
+        
+        allAllocation <- rbind(allAllocation, timeAllocation)
+        break
+      }
+    }
+  }
+  
+  return(allAllocation)
+}
+
+CollectAllTimesDHPendingInfo <- function(resultDir, constraintOn, allTasks = T, serverSize, mimServers) {
+  constraint <- "on"
+  if (!constraintOn)
+    constraint <- "off"
+  
+  allPendingInfo <- data_frame()
+  
+  for (time in 0:29) {
+    timeResultDir <- paste(resultDir, "/time", time, "/", sep = "")
+    prefixFileName <- paste("pending-queue-", constraint,"-", minServers, "-", serverSize, "-", serverSize, "-", sep = "")
+    
+    if (!allTasks) {
+      timeResultDir <- paste(timeResultDir, "prod/")
+    }
+    
+    for (fileName in list.files(path = timeResultDir)) {
+      
+      if (startsWith(fileName, prefixFileName)) {
+        print(paste("Collecting allocation info from file:", fileName))
+        
+        timePending <- CollectPendingInfo(paste(timeResultDir,fileName, sep = ""))
+        
+        allPendingInfo <- rbind(allPendingInfo, timePending)
+        break
+      }
+    }
+  }
+  
+  return(allPendingInfo)
+}
+
+CalculateCpuFragmentationCI <- function(allocation) {
+  t <- data.frame(upper = CI(allocation$cpu.fragmentation, ci = 0.95)[1], mean = CI(allocation$cpu.fragmentation, ci = 0.95)[2], lower = CI(allocation$cpu.fragmentation, ci = 0.95)[3])
+  return(t)
+}
+
+CalculateMemFragmentationCI <- function(allocation) {
+  t <- data.frame(upper = CI(allocation$mem.fragmentation, ci = 0.95)[1], mean = CI(allocation$mem.fragmentation, ci = 0.95)[2], lower = CI(allocation$mem.fragmentation, ci = 0.95)[3])
+  return(t)
+}
+
+CalculateServersCI <- function(allocation) {
+  t <- data.frame(upper = CI(allocation$servers, ci = 0.95)[1], mean = CI(allocation$servers, ci = 0.95)[2], lower = CI(allocation$servers, ci = 0.95)[3])
+  return(t)
+}
+
+PlotCpuFragmentationCI <- function(fragmentations, constraintOn) {
+  if (constraintOn) {
+    ggplot(fragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100)) + ylab("% of CPU fragmentation") + xlab("Infrastructure") +  
+      scale_y_continuous(limits = c(0.0, 8.0)) +  ggtitle(paste("CPU fragmentation considering placement constraint ", sep=""))  
+  } else {
+    ggplot(fragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100)) + ylab("% of CPU fragmentation") + xlab("Infrastructure") +  
+      scale_y_continuous(limits = c(0.0, 8.0)) +  ggtitle(paste("CPU fragmentation not considering placement constraint ", sep=""))
+  }
+}
+
+PlotMemFragmentationCI <- function(fragmentations, constraintOn) {
+  if (constraintOn) {
+    ggplot(fragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100)) + ylab("% of RAM fragmentation") + xlab("Infrastructure") +  
+      ggtitle(paste("RAM fragmentation considering placement constraint ", sep=""))  
+  } else {
+    ggplot(fragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100)) + ylab("% of RAM fragmentation") + xlab("Infrastructure") +  
+      ggtitle(paste("RAM fragmentation not considering placement constraint ", sep=""))
+  }
+}
+
+PlotServersCI <- function(servers) {
+  ggplot(servers, aes(x=infra, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower)) + ylab("#servers") + xlab("Infrastructure") +  
+    ggtitle(paste("Number of assembled logical servers", sep=""))  
+}
+
+allAllocations <- CollectAllTimesSBAllocationInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = T)
+allPendingInfo <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = T)
+
+resultDir <- "experiment-results/dh-based-results"
+
+allocation <- read.csv("experiment-results/dh-based-results/time0/allocation-on-1-16-16-9245-servers.csv")
+
+allocation <- read.csv("experiment-results/dh-based-results/time1/allocation-on-1-16-16-9358-servers.csv")
+allocation <- read.csv("experiment-results/dh-based-results/time18/allocation-on-1-16-16-11457-servers.csv")
+
+head(allocation)
+allocation %>% dplyr::summarise(pool.cpu=sum(cpuCapacity), pool.mem=sum(memCapacity)) 
+
+allocation %>% dplyr::summarise(servers=n(), infra.cpu=sum(cpuCapacity), infra.freeCpu=sum(freeCpu), cpu.fragmentation=infra.freeCpu/infra.cpu, cpu.remaing=total.cloud.cpu-infra.cpu,
+                                infra.mem=sum(memCapacity), infra.freeMem=sum(freeMem), mem.fragmentation=infra.freeMem/infra.mem, mem.remaing=total.cloud.mem-infra.mem)
+
+allocation %>% group_by(cpuPoolId) %>% dplyr::summarise(pool.cpu=sum(cpuCapacity), pool.mem=sum(memCapacity)) %>% dplyr::summarise(total.cpu=sum(pool.cpu), total.mem=sum(pool.mem))
+
+constraintOn = T
+serverSize = 16
+
+# collecting allocation info constraint on
+allDHAllocations1_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1)
+allDHAllocations1_12477 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 12477)
+allDHAllocations16_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 1)
+allDHAllocations16_12477 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 12477)
+
+cpuFragmentations <- data.frame()
+cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "sb", CalculateCpuFragmentationCI(allAllocations)))
+cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-blade-1", CalculateCpuFragmentationCI(allDHAllocations1_1)))
+cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-blade-12477", CalculateCpuFragmentationCI(allDHAllocations1_12477)))
+cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-drawer-1", CalculateCpuFragmentationCI(allDHAllocations16_1)))
+cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-drawer-12477", CalculateCpuFragmentationCI(allDHAllocations16_12477)))
+
+PlotCpuFragmentationCI(cpuFragmentations, T)
+
+memFragmentations <- data.frame()
+memFragmentations <- rbind(memFragmentations, data.frame(infra = "sb", CalculateMemFragmentationCI(allAllocations)))
+memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-blade-1", CalculateMemFragmentationCI(allDHAllocations1_1)))
+memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-blade-12477", CalculateMemFragmentationCI(allDHAllocations1_12477)))
+memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-drawer-1", CalculateMemFragmentationCI(allDHAllocations16_1)))
+memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-drawer-12477", CalculateMemFragmentationCI(allDHAllocations16_12477)))
+
+PlotMemFragmentationCI(memFragmentations, T)
+
+
+# evaluating number of servers
+allDHAllocationsOn1_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1)
+allDHAllocationsOff1_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 1, 1)
+
+allDHAllocationsOn16_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 1)
+allDHAllocationsOff16_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 16, 1)
+
+servers <- data.frame()
+servers<- rbind(servers, data.frame(infra = "dh-blade-on", CalculateServersCI(allDHAllocationsOn1_1)))
+servers<- rbind(servers, data.frame(infra = "dh-blade-off", CalculateServersCI(allDHAllocationsOff1_1)))
+servers<- rbind(servers, data.frame(infra = "dh-drawer-on", CalculateServersCI(allDHAllocationsOn16_1)))
+servers<- rbind(servers, data.frame(infra = "dh-drawer-off", CalculateServersCI(allDHAllocationsOff16_1)))
+
+PlotServersCI(servers)
+
+
+allDHPendingInfo <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 1)
+
+
+
+CI <- tasks %>% group_by(cpuReqNor) %>% dplyr::summarise(upper = CI(availability, ci = 0.95)[1], mean = CI(availability, ci = 0.95)[2], lower = CI(availability, ci = 0.95)[3]) 
+
+head(allDHAllocations)
+
+t <- data.frame(stringsAsFactors = FALSE)
+str(t)
+
+
+
+t <- rbind(t, data.frame(timestamp = "sb", upper = CI(allAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allAllocations$cpu.fragmentation, ci = 0.95)[3]))
+
+t <- rbind(t, data.frame(timestamp = "sb", upper = CI(allAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allAllocations$cpu.fragmentation, ci = 0.95)[3]))
+t <- rbind(t, data.frame(timestamp = "dh", upper = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[3]))
+
+t$time <- factor(t$time)
+t$upper <- factor(t$upper)
+t$mean <- factor(t$mean)
+t$lower <- factor(t$lower)
+t <- rbind(t, data.frame(timestamp = "dh", upper = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[3]))
+t <- rbind(t, c(timestamp = "dh", upper = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[3]))
+
+t$timestamp
+
+t <- as.data.frame(CI(allDHAllocations$cpu.fragmentation, ci = 0.95))
+t <- rbind(t, as.data.frame(CI(allAllocations$cpu.fragmentation, ci = 0.95)))
+
+
+t <- CI(allDHAllocations$cpu.fragmentation, ci = 0.95)
+t <- CI(allAllocations$cpu.fragmentation, ci = 0.95)
+
+
+colnames(t) <- c("time", "upper", "mean", "lower")
+is.data.frame(t)
+ggplot(cpuFragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100))
 
 
 allocation %>% summary()
@@ -39,15 +287,9 @@ pendingQueueFractionSB <- (pendingQueueSB %>% summarise(n()))/total.tasks
 
 
 
-CI <- tasks %>% group_by(cpuReqNor) %>% dplyr::summarise(upper = CI(availability, ci = 0.95)[1], mean = CI(availability, ci = 0.95)[2], lower = CI(availability, ci = 0.95)[3]) 
+allocation <- CollectAllocationInfo("server-based-results/all-constraints-on-server-based/allocation-12477-hosts.csv")
+pendingQueue <- CollectPendingInfo("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
 
-head(allocation)
-t <- data.frame()
-t <- rbind(t, c(timestamp = 0, upper = CI(allocation$cpuCapacity, ci = 0.95)[1], mean = CI(allocation$cpuCapacity, ci = 0.95)[2], lower = CI(allocation$cpuCapacity, ci = 0.95)[3]))
-
-colnames(t) <- c("time", "upper", "mean", "lower")
-is.data.frame(t)
-ggplot(t, aes(x=time, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower))
 
 
 
