@@ -112,4 +112,17 @@ public class Task {
 				+ ", priority=" + getPriority() + ", antiaffinity=" + isAntiAffinity() + ", constraints="
 				+ getConstraints();
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof Task) {
+			Task other = (Task) obj;
+			return other.getJid() == getJid() && other.getTid() == getTid() && other.getCpuReq() == getCpuReq()
+					&& other.getMemReq() == getMemReq() && other.getPriority() == getPriority()
+					&& (other.isAntiAffinity() == isAntiAffinity())
+					&& (other.getConstraints().containsAll(getConstraints())
+							&& getConstraints().containsAll(other.getConstraints()));
+		}
+		return false;
+	}
 }

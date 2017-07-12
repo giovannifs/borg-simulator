@@ -4,11 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Properties;
 import java.util.Random;
-import java.util.TreeMap;
 
+import org.cloudish.borg.model.ResourceAttribute;
 import org.cloudish.borg.model.Task;
 import org.cloudish.dh.model.LogicalServer;
 import org.cloudish.dh.model.ResourcePool;
@@ -21,7 +20,6 @@ public class DHManager {
 	private Map<String, LogicalServer> possibleGKValues = new HashMap<>();
 	private double cpuResourceGrain;
 	private double memResourceGrain;
-	private int minLogicalServer;
 	private double maxCpuServerCapacity;
 	private double maxMemServerCapacity;
 	
@@ -38,7 +36,6 @@ public class DHManager {
 		this.constraintsOn = properties.getProperty("placement_constraints_on") == null
 				|| properties.getProperty("placement_constraints_on").equals("yes") ? true : false;
 
-		this.minLogicalServer = Integer.parseInt(properties.getProperty("min_logical_servers"));
 		this.maxCpuServerCapacity = Double.parseDouble(properties.getProperty("max_cpu_logical_server_capacity"));
 		this.maxMemServerCapacity = Double.parseDouble(properties.getProperty("max_memory_logical_server_capacity"));
 		this.resourcePools = resourcePools;
@@ -48,20 +45,37 @@ public class DHManager {
 		}
 	}
 
+	public LogicalServer createLogicalServer(Map<String, ResourceAttribute> attributes) {		
+		ResourcePool memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, null);
+		ResourcePool cpuPool = null;
+		
+		for (ResourcePool pool : resourcePools.get(ResourcePool.CPU_TYPE)) {
+			if (pool.match(attributes)) {
+				cpuPool = pool;
+				break;
+			}
+		}
+		
+		return new LogicalServer(cpuPool, memPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
+				getCpuResourceGrain(), getMemResourceGrain(), this, isConstraintsOn());
+	}
+	
 	public LogicalServer createLogicalServer(Task task) {		
 		ResourcePool cpuPool = null;
 		ResourcePool memPool = null;
 		
 		// creating initial logical server, then it must choose cpuPool according to its size
-		if (task == null) {			
-			cpuPool = chooseCpuPoolRandomly();
-			memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
-			
-		} else {
+		if (task == null) {
+//			cpuPool = chooseCpuPoolRandomly();
+//			memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
+//			
+			throw new RuntimeException("Trying to allocatie a null task.");
+		} 
+//		else {
 			// choosing cpu resource pool
 			cpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
 			memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
-		}
+//		}
 
 		// there is not any cpu or mem pool feasible to the task
 		if (cpuPool == null || memPool == null) {
@@ -72,19 +86,19 @@ public class DHManager {
 				getCpuResourceGrain(), getMemResourceGrain(), this, isConstraintsOn());
 	}
 
-	private ResourcePool chooseCpuPoolRandomly() {
-		ResourcePool cpuPool;
-		RandomCollection<ResourcePool> rc = new RandomCollection<ResourcePool>();
-		
-		for (ResourcePool pool : resourcePools.get(ResourcePool.CPU_TYPE)) {
-			rc.add(pool.getFreeCapacity(), pool);				
-		}
-		
-		cpuPool = rc.next();
-		
-		System.out.println(cpuPool.getId() + " - size: " + cpuPool.getCapacity());
-		return cpuPool;
-	}
+//	private ResourcePool chooseCpuPoolRandomly() {
+//		ResourcePool cpuPool;
+//		RandomCollection<ResourcePool> rc = new RandomCollection<ResourcePool>();
+//		
+//		for (ResourcePool pool : resourcePools.get(ResourcePool.CPU_TYPE)) {
+//			rc.add(pool.getFreeCapacity(), pool);				
+//		}
+//		
+//		cpuPool = rc.next();
+//		
+//		System.out.println(cpuPool.getId() + " - size: " + cpuPool.getCapacity());
+//		return cpuPool;
+//	}
 
 	private ResourcePool chooseResourcePool(String poolType, Task task) {
 		ResourcePool bestPool = null;
@@ -114,7 +128,7 @@ public class DHManager {
 	}
 	
 	private double calcCpuToBeRequested(Task task) {
-		if (task == null) {
+		if (task == null || task.getCpuReq() == 0) {
 			return getCpuResourceGrain();
 		}
 		double cpuToBeScaled = Utils.format(task.getCpuReq());
@@ -125,7 +139,7 @@ public class DHManager {
 	}
 
 	private double calcMemToBeRequested(Task task) {
-		if (task == null) {
+		if (task == null || task.getMemReq() == 0) {
 			return getMemResourceGrain();
 		}
 		double memToBeScaled = Utils.format(task.getMemReq());
@@ -138,7 +152,7 @@ public class DHManager {
 
 	public boolean allocate(Task task) {
 		
-		System.out.println("Allocating " + task);
+//		System.out.println("Allocating " + task);
 		double bestScore = -1;
 		List<LogicalServer> bestLogicalServers = new ArrayList<>();
 		
@@ -214,10 +228,6 @@ public class DHManager {
 	public List<Task> getPendingQueue() {
 		return pendingQueue;
 	}
-	
-	public int getMinLogicalServer() {
-		return minLogicalServer;
-	}
 
 	public Map<String, List<ResourcePool>> getResourcePools() {
 		return resourcePools;
@@ -229,10 +239,6 @@ public class DHManager {
 	
 	public double getMemResourceGrain() {
 		return memResourceGrain;
-	}
-
-	public boolean hasMinimumLogicalServer() {
-		return getLogicalServers().size() >= getMinLogicalServer();
 	}
 
 	public double getMaxCpuServerCapacity() {
@@ -264,28 +270,28 @@ public class DHManager {
 	}
 }
 
-class RandomCollection<E> {
-    private final NavigableMap<Double, E> map = new TreeMap<Double, E>();
-    private final Random random;
-    private double total = 0;
-
-    public RandomCollection() {
-        this(new Random());
-    }
-
-    public RandomCollection(Random random) {
-        this.random = random;
-    }
-
-    public RandomCollection<E> add(double weight, E result) {
-        if (weight <= 0) return this;
-        total += weight;
-        map.put(total, result);
-        return this;
-    }
-
-    public E next() {
-        double value = random.nextDouble() * total;
-        return map.higherEntry(value).getValue();
-    }
-}
+//class RandomCollection<E> {
+//    private final NavigableMap<Double, E> map = new TreeMap<Double, E>();
+//    private final Random random;
+//    private double total = 0;
+//
+//    public RandomCollection() {
+//        this(new Random());
+//    }
+//
+//    public RandomCollection(Random random) {
+//        this.random = random;
+//    }
+//
+//    public RandomCollection<E> add(double weight, E result) {
+//        if (weight <= 0) return this;
+//        total += weight;
+//        map.put(total, result);
+//        return this;
+//    }
+//
+//    public E next() {
+//        double value = random.nextDouble() * total;
+//        return map.higherEntry(value).getValue();
+//    }
+//}

@@ -196,6 +196,43 @@ public class TestResourcePool {
 		
 		Assert.assertTrue(pool.isFeasible(task));
 	}
+	
+	@Test
+	public void testMatchWithAttributes() {
+		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes);
+	
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), poolAttributes, true);
+		
+		Assert.assertTrue(pool.match(host.getAttributes()));
+	}
+	
+	@Test
+	public void testMatchWithAttributes2() {
+		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes);
+		
+		// empty host attributes
+		Map<String, ResourceAttribute> hostAttributes = new HashMap<>();
+		Host host = new Host(0, 10, 10, new KubernetesRankingScore(), hostAttributes, true);
+				
+		Assert.assertFalse(pool.match(host.getAttributes()));
+
+		// partial pool attributes
+		hostAttributes.put("9e", new ResourceAttribute("9e", "2"));
+		hostAttributes.put("nZ", new ResourceAttribute("nZ", "2"));
+		
+		Assert.assertFalse(pool.match(host.getAttributes()));
+		
+		// same pool attributes		
+		hostAttributes.putAll(poolAttributes);
+		
+		Assert.assertTrue(pool.match(host.getAttributes()));
+		
+		// more attributes than pool
+		hostAttributes.put("By", new ResourceAttribute("By", "3"));
+		
+		Assert.assertFalse(pool.match(host.getAttributes()));
+	}
+	
 	@Test
 	public void testIsFeasibleAndHasMoreResource() {
 		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, poolAttributes);

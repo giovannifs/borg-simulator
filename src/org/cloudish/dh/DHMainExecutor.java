@@ -58,12 +58,28 @@ public class DHMainExecutor {
 		DHManager dhManager = new DHManager(properties, resourcePools, GKValues);
 		
 		// creating initial DH-based infrastructure
-		while (dhManager.getLogicalServers().size() < dhManager.getMinLogicalServer()) {
+		String dhModel = properties.getProperty("dh_model");
+		
+		// creating DH-based infra considering blade DH model
+		if (dhModel.equals("blade")){
+			for (Host host : hosts) {
+				LogicalServer logicalServer = dhManager.createLogicalServer(host.getAttributes());
+				dhManager.addLogicalServer(logicalServer);
+			}
+		} else if (dhModel.equals("drawer")) {
 			
-			LogicalServer logicalServer = dhManager.createLogicalServer(null);
-			dhManager.addLogicalServer(logicalServer);			
+		} else {
+			throw new RuntimeException("Invalid DH model informed.");
 		}
+		
+//		while (dhManager.getLogicalServers().size() < dhManager.getMinLogicalServer()) {
+//			
+//			LogicalServer logicalServer = dhManager.createLogicalServer(null);
+//			dhManager.addLogicalServer(logicalServer);			
+//		}
 				
+		System.out.println("Execution initiated with " + dhManager.getLogicalServers().size() + " logical servers.");
+		
 		// allocating the tasks
 		int numberOfTasks = 0;
 		
@@ -135,11 +151,12 @@ public class DHMainExecutor {
 		String isConstraintsOn = properties.getProperty("placement_constraints_on") == null
 				|| properties.getProperty("placement_constraints_on").equals("yes") ? "on" : "off";
 
-		String minLogicalServer = properties.getProperty("min_logical_servers");
+		//String minLogicalServer = properties.getProperty("min_logical_servers");
 		String maxCpuServerCapacity = properties.getProperty("max_cpu_logical_server_capacity");
 		String maxMemServerCapacity = properties.getProperty("max_memory_logical_server_capacity");
+		String dhModel = properties.getProperty("dh_model");
 		
-		PrintWriter writer = new PrintWriter(outputDir + "/allocation-" + isConstraintsOn + "-" + minLogicalServer + "-"
+		PrintWriter writer = new PrintWriter(outputDir + "/allocation-" + isConstraintsOn + "-" + dhModel + "-"
 				+ maxCpuServerCapacity + "-" + maxMemServerCapacity + "-" + nLogicalServers + "-servers.csv", "UTF-8");
 		writer.println("cpuPoolId,cpuCapacity,freeCpu,memCapacity,freeMem,gkAttr,QlAttr");
 		for (LogicalServer logicalServer : dhManager.getLogicalServers()) {
@@ -150,7 +167,7 @@ public class DHMainExecutor {
 		writer.close();
 		
 		//writing pending queue
-		writer = new PrintWriter(outputDir + "/pending-queue-" + isConstraintsOn + "-" + minLogicalServer + "-"
+		writer = new PrintWriter(outputDir + "/pending-queue-" + isConstraintsOn + "-" + dhModel + "-"
 				+ maxCpuServerCapacity + "-" + maxMemServerCapacity + "-" + nLogicalServers + "-servers.csv", "UTF-8");
 		writer.println("tid,jid,cpuReq,memReq,priority");
 		for (Task task : dhManager.getPendingQueue()) {

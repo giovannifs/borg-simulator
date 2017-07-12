@@ -3,6 +3,8 @@ library(foreach)
 library(ggplot2)
 library("Rmisc")
 
+theme_set(theme_bw())
+
 setwd("/local/giovanni/git/borg-simulator/")
 setwd("C:/Users/giovanni/Documents/cloudish/git/borg-simulator/")
 
@@ -53,7 +55,7 @@ CollectAllTimesSBAllocationInfo <- function(resultDir, constraintOn, allTasks) {
   return(allAllocation)
 }
 
-CollectAllTimesSBPendingInfo <- function(resultDir, constraintOn, allTasks) {
+CollectAllTimesSBPendingInfo <- function(resultDir, constraintOn, allTasks, numberOfTasks) {
   constraint <- "on"
   
   if (!constraintOn)
@@ -69,13 +71,16 @@ CollectAllTimesSBPendingInfo <- function(resultDir, constraintOn, allTasks) {
     
     timePending <- CollectPendingInfo(paste(resultDir,"/time",time,"/", workload, "/pending-queue-", constraint,"-12477-hosts.csv", sep = ""))
     
+    total.tasks <- numberOfTasks %>% filter(timestamp == time) %>% select(nTasks)
+    timePending <- data.frame(timePending, nTasks = total.tasks)
+    
     allPendingInfo <- rbind(allPendingInfo, timePending)
   }
   return(allPendingInfo)
 }
 
 
-CollectAllTimesDHAllocationInfo <- function(resultDir, constraintOn, allTasks = T, serverSize, minServers) {
+CollectAllTimesDHAllocationInfo <- function(resultDir, constraintOn, allTasks = T, serverSize, minServers, resourceLabel = NULL) {
   constraint <- "on"
   if (!constraintOn)
     constraint <- "off"
@@ -84,7 +89,14 @@ CollectAllTimesDHAllocationInfo <- function(resultDir, constraintOn, allTasks = 
   
   for (time in 0:29) {
     print(paste("Time ", time), sep= "")
-    timeResultDir <- paste(resultDir, "/time", time, "/", sep = "")
+    
+    if (is.null(resourceLabel)) {
+      timeResultDir <- paste(resultDir, "/time", time, "/", sep = "")
+      
+    } else {
+      timeResultDir <- paste(resultDir, "/time", time, "/", resourceLabel, "/", sep = "")
+    }
+    
     prefixFileName <- paste("allocation-", constraint,"-", minServers, "-", serverSize, "-", serverSize, "-", sep = "")
     
     if (!allTasks) {
@@ -107,7 +119,7 @@ CollectAllTimesDHAllocationInfo <- function(resultDir, constraintOn, allTasks = 
   return(allAllocation)
 }
 
-CollectAllTimesDHPendingInfo <- function(resultDir, constraintOn, allTasks = T, serverSize, mimServers) {
+CollectAllTimesDHPendingInfo <- function(resultDir, constraintOn, allTasks = T, serverSize, mimServers, numberOfTasks, resourceLabel = NULL) {
   constraint <- "on"
   if (!constraintOn)
     constraint <- "off"
@@ -115,12 +127,20 @@ CollectAllTimesDHPendingInfo <- function(resultDir, constraintOn, allTasks = T, 
   allPendingInfo <- data_frame()
   
   for (time in 0:29) {
-    timeResultDir <- paste(resultDir, "/time", time, "/", sep = "")
+    #timeResultDir <- paste(resultDir, "/time", time, "/", sep = "")
+    
+    if (is.null(resourceLabel)) {
+      timeResultDir <- paste(resultDir, "/time", time, "/", sep = "")
+      
+    } else {
+      timeResultDir <- paste(resultDir, "/time", time, "/", resourceLabel, "/", sep = "")
+    }
+    
     prefixFileName <- paste("pending-queue-", constraint,"-", minServers, "-", serverSize, "-", serverSize, "-", sep = "")
     
     if (!allTasks) {
       timeResultDir <- paste(timeResultDir, "prod/")
-    }
+    } 
     
     for (fileName in list.files(path = timeResultDir)) {
       
@@ -128,6 +148,9 @@ CollectAllTimesDHPendingInfo <- function(resultDir, constraintOn, allTasks = T, 
         print(paste("Collecting allocation info from file:", fileName))
         
         timePending <- CollectPendingInfo(paste(timeResultDir,fileName, sep = ""))
+        
+        total.tasks <- numberOfTasks %>% filter(timestamp == time) %>% select(nTasks)
+        timePending <- data.frame(timePending, nTasks = total.tasks)
         
         allPendingInfo <- rbind(allPendingInfo, timePending)
         break
@@ -153,13 +176,33 @@ CalculateServersCI <- function(allocation) {
   return(t)
 }
 
+CalculatePendingFractionCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(((pendingInfo$tasks)/pendingInfo$nTasks), ci = 0.95)[1], mean = CI(((pendingInfo$tasks)/pendingInfo$nTasks), ci = 0.95)[2], lower = CI(((pendingInfo$tasks)/pendingInfo$nTasks), ci = 0.95)[3])
+  return(t)
+}
+
+CalculateProdPendingFractionCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(((pendingInfo$prod)/pendingInfo$tasks), ci = 0.95)[1], mean = CI(((pendingInfo$prod)/pendingInfo$tasks), ci = 0.95)[2], lower = CI(((pendingInfo$prod)/pendingInfo$tasks), ci = 0.95)[3])
+  return(t)
+}
+
+CalculatePendingCpuCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(pendingInfo$total.cpu, ci = 0.95)[1], mean = CI(pendingInfo$total.cpu, ci = 0.95)[2], lower = CI(pendingInfo$total.cpu, ci = 0.95)[3])
+  return(t)
+}
+
+CalculatePendingMemCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(pendingInfo$total.mem, ci = 0.95)[1], mean = CI(pendingInfo$total.mem, ci = 0.95)[2], lower = CI(pendingInfo$total.mem, ci = 0.95)[3])
+  return(t)
+}
+
 PlotCpuFragmentationCI <- function(fragmentations, constraintOn) {
   if (constraintOn) {
     ggplot(fragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100)) + ylab("% of CPU fragmentation") + xlab("Infrastructure") +  
-      scale_y_continuous(limits = c(0.0, 8.0)) +  ggtitle(paste("CPU fragmentation considering placement constraint ", sep=""))  
+      ggtitle(paste("CPU fragmentation considering placement constraint ", sep=""))  
   } else {
     ggplot(fragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100)) + ylab("% of CPU fragmentation") + xlab("Infrastructure") +  
-      scale_y_continuous(limits = c(0.0, 8.0)) +  ggtitle(paste("CPU fragmentation not considering placement constraint ", sep=""))
+      ggtitle(paste("CPU fragmentation not considering placement constraint ", sep=""))
   }
 }
 
@@ -178,8 +221,57 @@ PlotServersCI <- function(servers) {
     ggtitle(paste("Number of assembled logical servers", sep=""))  
 }
 
-allAllocations <- CollectAllTimesSBAllocationInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = T)
-allPendingInfo <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = T)
+PlotPendingFractionCI <- function(pendingFraction) {
+  ggplot(pendingFraction, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper * 100, ymin=lower * 100)) + ylab("% of tasks") + xlab("Infrastructure") +  
+    ggtitle(paste("% of tasks in pending queue", sep=""))  
+}
+
+PlotProdPendingFractionCI <- function(pendingFraction) {
+  ggplot(pendingFraction, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper * 100, ymin=lower * 100)) + ylab("% of prod tasks") + xlab("Infrastructure") +  
+    ggtitle(paste("% of pending queue that is prod task", sep=""))  
+}
+
+PlotPendingCpuCI <- function(pendingCpuCI) {
+  ggplot(pendingCpuCI, aes(x=infra, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower)) + ylab("requested cpu") + xlab("Infrastructure") +  
+    ggtitle(paste("Amount of cpu requested by tasks in pending queue", sep=""))  
+}
+
+PlotPendingMemCI <- function(pendingMemCI) {
+  ggplot(pendingMemCI, aes(x=infra, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower)) + ylab("requested RAM") + xlab("Infrastructure") +  
+    ggtitle(paste("Amount of RAM requested by tasks in pending queue", sep=""))  
+}
+
+CollectAllocationDiffBetweenSBAndDH <- function(allSBAllocationsOn, allDHAllocationsOn1_1){
+  
+  sbAllocation <- allSBAllocationsOn
+  dhAllocation <- allDHAllocations1_1
+  
+  timePending <- 
+  
+  total.tasks <- numberOfTasks %>% filter(timestamp == time) %>% select(nTasks)
+  timePending <- data.frame(timePending, nTasks = total.tasks)
+  
+  allPendingInfo <- rbind(allPendingInfo, timePending)
+  
+}
+
+
+nAllTasks <- read.csv("number_of_tasks.txt")
+nProdTasks <- read.csv("number_of_prod_tasks.txt")
+
+allSBAllocationsOn <- CollectAllTimesSBAllocationInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = T)
+allSBPendingInfoOn <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = T, nAllTasks)
+
+allSBAllocationsOff <- CollectAllTimesSBAllocationInfo("experiment-results/sb-based-results", constraintOn = F, allTasks = T)
+allSBPendingInfoOff <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = F, allTasks = T, nAllTasks)
+
+
+allSBProdAllocations <- CollectAllTimesSBAllocationInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = F)
+allSBProdPendingInfo <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = F, nProdAllTasks)
+
+allSBProdAllocationsOff <- CollectAllTimesSBAllocationInfo("experiment-results/sb-based-results", constraintOn = F, allTasks = F)
+allSBProdPendingInfoOff <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = F, allTasks = F, nProdTasks)
+
 
 resultDir <- "experiment-results/dh-based-results"
 
@@ -199,27 +291,36 @@ allocation %>% group_by(cpuPoolId) %>% dplyr::summarise(pool.cpu=sum(cpuCapacity
 constraintOn = T
 serverSize = 16
 
+diffOn1_1 <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocationsOn1_1)
+
 # collecting allocation info constraint on
-allDHAllocations1_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1)
+allDHAllocationsOn1_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1)
+allDHAllocationsOff1_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 1, 1)
 allDHAllocations1_12477 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 12477)
-allDHAllocations16_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 1)
+allDHAllocationsOn16_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 1)
+allDHAllocationsOff16_1 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 16, 1)
 allDHAllocations16_12477 <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 12477)
 
 cpuFragmentations <- data.frame()
-cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "sb", CalculateCpuFragmentationCI(allAllocations)))
-cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-blade-1", CalculateCpuFragmentationCI(allDHAllocations1_1)))
-cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-blade-12477", CalculateCpuFragmentationCI(allDHAllocations1_12477)))
-cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-drawer-1", CalculateCpuFragmentationCI(allDHAllocations16_1)))
-cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-drawer-12477", CalculateCpuFragmentationCI(allDHAllocations16_12477)))
+cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "sb-on", CalculateCpuFragmentationCI(allSBAllocationsOn)))
+#cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "sb-off", CalculateCpuFragmentationCI(allSBAllocationsOff)))
+cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-blade-on", CalculateCpuFragmentationCI(allDHAllocationsOn1_1)))
+#cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-blade-off", CalculateCpuFragmentationCI(allDHAllocationsOff1_1)))
+#cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-blade-12477", CalculateCpuFragmentationCI(allDHAllocations1_12477)))
+cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-drawer-on", CalculateCpuFragmentationCI(allDHAllocationsOn16_1)))
+#cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-drawer-off", CalculateCpuFragmentationCI(allDHAllocationsOff16_1)))
+#cpuFragmentations <- rbind(cpuFragmentations, data.frame(infra = "dh-drawer-12477", CalculateCpuFragmentationCI(allDHAllocations16_12477)))
 
 PlotCpuFragmentationCI(cpuFragmentations, T)
 
+
+
 memFragmentations <- data.frame()
-memFragmentations <- rbind(memFragmentations, data.frame(infra = "sb", CalculateMemFragmentationCI(allAllocations)))
-memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-blade-1", CalculateMemFragmentationCI(allDHAllocations1_1)))
-memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-blade-12477", CalculateMemFragmentationCI(allDHAllocations1_12477)))
-memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-drawer-1", CalculateMemFragmentationCI(allDHAllocations16_1)))
-memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-drawer-12477", CalculateMemFragmentationCI(allDHAllocations16_12477)))
+memFragmentations <- rbind(memFragmentations, data.frame(infra = "sb-on", CalculateMemFragmentationCI(allAllocations)))
+memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-blade-on", CalculateMemFragmentationCI(allDHAllocations1_1)))
+#memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-blade-12477", CalculateMemFragmentationCI(allDHAllocations1_12477)))
+memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-drawer-on", CalculateMemFragmentationCI(allDHAllocations16_1)))
+#memFragmentations <- rbind(memFragmentations, data.frame(infra = "dh-drawer-12477", CalculateMemFragmentationCI(allDHAllocations16_12477)))
 
 PlotMemFragmentationCI(memFragmentations, T)
 
@@ -239,172 +340,94 @@ servers<- rbind(servers, data.frame(infra = "dh-drawer-off", CalculateServersCI(
 
 PlotServersCI(servers)
 
+# pending queue
+allDHPendingInfoOn1_1 <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1, nAllTasks)
+allDHPendingInfoOff1_1 <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 1, 1, nAllTasks)
+allDHPendingInfoOn16_1 <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 1, nAllTasks)
+allDHPendingInfoOff16_1 <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 16, 1, nAllTasks)
 
-allDHPendingInfo <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, 1)
+pendingFraction <- data.frame()
+pendingFraction<- rbind(pendingFraction, data.frame(infra = "sb-on", CalculatePendingFractionCI(allSBPendingInfoOn)))
+pendingFraction<- rbind(pendingFraction, data.frame(infra = "sb-off", CalculatePendingFractionCI(allSBPendingInfoOff)))
+pendingFraction<- rbind(pendingFraction, data.frame(infra = "dh-blade-on", CalculatePendingFractionCI(allDHPendingInfoOn1_1)))
+pendingFraction<- rbind(pendingFraction, data.frame(infra = "dh-blade-off", CalculatePendingFractionCI(allDHPendingInfoOff1_1)))
+pendingFraction<- rbind(pendingFraction, data.frame(infra = "dh-drawer-on", CalculatePendingFractionCI(allDHPendingInfoOn16_1)))
+pendingFraction<- rbind(pendingFraction, data.frame(infra = "dh-drawer-off", CalculatePendingFractionCI(allDHPendingInfoOff16_1)))
 
+PlotPendingFractionCI(pendingFraction)
 
+prodPendingFraction <- data.frame()
+prodPendingFraction<- rbind(prodPendingFraction, data.frame(infra = "sb", CalculateProdPendingFractionCI(allSBPendingInfo)))
+prodPendingFraction<- rbind(prodPendingFraction, data.frame(infra = "dh-blade-on", CalculateProdPendingFractionCI(allDHPendingInfoOn1_1)))
+prodPendingFraction<- rbind(prodPendingFraction, data.frame(infra = "dh-blade-off", CalculateProdPendingFractionCI(allDHPendingInfoOff1_1)))
+prodPendingFraction<- rbind(prodPendingFraction, data.frame(infra = "dh-drawer-on", CalculateProdPendingFractionCI(allDHPendingInfoOn16_1)))
+prodPendingFraction<- rbind(prodPendingFraction, data.frame(infra = "dh-drawer-off", CalculateProdPendingFractionCI(allDHPendingInfoOff16_1)))
 
-CI <- tasks %>% group_by(cpuReqNor) %>% dplyr::summarise(upper = CI(availability, ci = 0.95)[1], mean = CI(availability, ci = 0.95)[2], lower = CI(availability, ci = 0.95)[3]) 
+PlotProdPendingFractionCI(prodPendingFraction)
 
-head(allDHAllocations)
+pendingCpuCI <- data.frame()
+pendingCpuCI<- rbind(pendingCpuCI, data.frame(infra = "sb-on", CalculatePendingCpuCI(allSBPendingInfoOn)))
+pendingCpuCI<- rbind(pendingCpuCI, data.frame(infra = "sb-off", CalculatePendingCpuCI(allSBPendingInfoOff)))
+pendingCpuCI<- rbind(pendingCpuCI, data.frame(infra = "dh-blade-on", CalculatePendingCpuCI(allDHPendingInfoOn1_1)))
+pendingCpuCI<- rbind(pendingCpuCI, data.frame(infra = "dh-blade-off", CalculatePendingCpuCI(allDHPendingInfoOff1_1)))
+pendingCpuCI<- rbind(pendingCpuCI, data.frame(infra = "dh-drawer-on", CalculatePendingCpuCI(allDHPendingInfoOn16_1)))
+pendingCpuCI<- rbind(pendingCpuCI, data.frame(infra = "dh-drawer-off", CalculatePendingCpuCI(allDHPendingInfoOff16_1)))
 
-t <- data.frame(stringsAsFactors = FALSE)
-str(t)
+PlotPendingCpuCI(pendingCpuCI)
 
+pendingMemCI <- data.frame()
+pendingMemCI<- rbind(pendingMemCI, data.frame(infra = "sb-on", CalculatePendingMemCI(allSBPendingInfoOn)))
+pendingMemCI<- rbind(pendingMemCI, data.frame(infra = "sb-off", CalculatePendingMemCI(allSBPendingInfoOff)))
+pendingMemCI<- rbind(pendingMemCI, data.frame(infra = "dh-blade-on", CalculatePendingMemCI(allDHPendingInfoOn1_1)))
+pendingMemCI<- rbind(pendingMemCI, data.frame(infra = "dh-blade-off", CalculatePendingMemCI(allDHPendingInfoOff1_1)))
+pendingMemCI<- rbind(pendingMemCI, data.frame(infra = "dh-drawer-on", CalculatePendingMemCI(allDHPendingInfoOn16_1)))
+pendingMemCI<- rbind(pendingMemCI, data.frame(infra = "dh-drawer-off", CalculatePendingMemCI(allDHPendingInfoOff16_1)))
 
-
-t <- rbind(t, data.frame(timestamp = "sb", upper = CI(allAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allAllocations$cpu.fragmentation, ci = 0.95)[3]))
-
-t <- rbind(t, data.frame(timestamp = "sb", upper = CI(allAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allAllocations$cpu.fragmentation, ci = 0.95)[3]))
-t <- rbind(t, data.frame(timestamp = "dh", upper = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[3]))
-
-t$time <- factor(t$time)
-t$upper <- factor(t$upper)
-t$mean <- factor(t$mean)
-t$lower <- factor(t$lower)
-t <- rbind(t, data.frame(timestamp = "dh", upper = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[3]))
-t <- rbind(t, c(timestamp = "dh", upper = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[1], mean = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[2], lower = CI(allDHAllocations$cpu.fragmentation, ci = 0.95)[3]))
-
-t$timestamp
-
-t <- as.data.frame(CI(allDHAllocations$cpu.fragmentation, ci = 0.95))
-t <- rbind(t, as.data.frame(CI(allAllocations$cpu.fragmentation, ci = 0.95)))
-
-
-t <- CI(allDHAllocations$cpu.fragmentation, ci = 0.95)
-t <- CI(allAllocations$cpu.fragmentation, ci = 0.95)
-
-
-colnames(t) <- c("time", "upper", "mean", "lower")
-is.data.frame(t)
-ggplot(cpuFragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100))
-
-
-allocation %>% summary()
-pendingQueueSize <- pendingQueueSB %>% summarise(n())
-pendingQueueSB %>% group_by(priority) %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
-pendingQueueFractionSB <- (pendingQueueSB %>% summarise(n()))/total.tasks
-
+PlotPendingMemCI(pendingMemCI)
 
 
-allocation <- CollectAllocationInfo("server-based-results/all-constraints-on-server-based/allocation-12477-hosts.csv")
-pendingQueue <- CollectPendingInfo("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
+mem <- allDHAllocations16_1 %>% filter(mem.remaing < 1) %>% dplyr::summarise(n())
+nopend <- allDHAllocations16_1 %>% filter(mem.remaing > 1 & cpu.remaing > 1) %>% dplyr::summarise(n())
+cpu <- allDHAllocations16_1 %>% filter(cpu.remaing < 1) %>% dplyr::summarise(n())
+5/30
+2/30
+23/30
+# resource grain
+allDHAllocationsOn1_1_small <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1, resourceLabel = "small-grain")
+allDHAllocationsOn1_1_medium <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1, resourceLabel = "medium-grain")
+allDHAllocationsOn1_1_big <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1, resourceLabel = "big-grain")
+
+cpuFragmentationsRG <- data.frame()
+cpuFragmentationsRG <- rbind(cpuFragmentationsRG, data.frame(infra = "sb", CalculateCpuFragmentationCI(allSBAllocationsOn)))
+cpuFragmentationsRG <- rbind(cpuFragmentationsRG, data.frame(infra = "dh-blade-large-grain", CalculateCpuFragmentationCI(allDHAllocationsOn1_1_big)))
+cpuFragmentationsRG <- rbind(cpuFragmentationsRG, data.frame(infra = "dh-blade-small-grain", CalculateCpuFragmentationCI(allDHAllocationsOn1_1_medium)))
+#cpuFragmentationsRG <- rbind(cpuFragmentationsRG, data.frame(infra = "dh-blade-small-grain", CalculateCpuFragmentationCI(allDHAllocationsOn1_1_small)))
+
+PlotCpuFragmentationCI(cpuFragmentationsRG, T)
+
+memFragmentationsRG <- data.frame()
+memFragmentationsRG <- rbind(memFragmentationsRG, data.frame(infra = "sb", CalculateMemFragmentationCI(allSBAllocationsOn)))
+memFragmentationsRG <- rbind(memFragmentationsRG, data.frame(infra = "dh-blade-large-grain", CalculateMemFragmentationCI(allDHAllocationsOn1_1_big)))
+memFragmentationsRG <- rbind(memFragmentationsRG, data.frame(infra = "dh-blade-small-grain", CalculateMemFragmentationCI(allDHAllocationsOn1_1_medium)))
+#memFragmentationsRG <- rbind(memFragmentationsRG, data.frame(infra = "dh-blade-small-grain", CalculateMemFragmentationCI(allDHAllocationsOn1_1_small)))
+
+PlotMemFragmentationCI(memFragmentationsRG, T)
+
+serversRG <- data.frame()
+serversRG<- rbind(serversRG, data.frame(infra = "dh-blade-large-grain", CalculateServersCI(allDHAllocationsOn1_1_big)))
+serversRG<- rbind(serversRG, data.frame(infra = "dh-blade-mid-grain", CalculateServersCI(allDHAllocationsOn1_1_medium)))
+serversRG<- rbind(serversRG, data.frame(infra = "dh-blade-small-grain", CalculateServersCI(allDHAllocationsOn1_1_small)))
+
+PlotServersCI(serversRG)
+
+allDHPendingInfoOn1_1_small <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1, nAllTasks, "small-grain")
+allDHPendingInfoOn1_1_medium <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1, nAllTasks, "medium-grain")
+allDHPendingInfoOn1_1_big <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, 1, nAllTasks, "big-grain")
 
 
+pendingFractionRG <- data.frame()
+pendingFractionRG<- rbind(pendingFractionRG, data.frame(infra = "dh-blade-large-grain", CalculatePendingFractionCI(allDHPendingInfoOn1_1_big)))
+pendingFractionRG<- rbind(pendingFractionRG, data.frame(infra = "dh-blade-mid-grain", CalculatePendingFractionCI(allDHPendingInfoOn1_1_medium)))
+pendingFractionRG<- rbind(pendingFractionRG, data.frame(infra = "dh-blade-small-grain", CalculatePendingFractionCI(allDHPendingInfoOn1_1_small)))
 
-
-# server-based
-# all tasks constraint On
-allocationSB <- read.csv("server-based-results/all-constraints-on-server-based/allocation-12477-hosts.csv")
-pendingQueueSB <- read.csv("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
-
-pendingQueueSize <- pendingQueueSB %>% summarise(n())
-allocationSB %>% summarise(total.cpu=sum(cpuCapacity), total.freeCpu=sum(freeCpu), cpu.fragmentation=total.freeCpu/total.cloud.cpu, total.mem=sum(memCapacity), total.freeMem=sum(freeMem), mem.fragmentation=total.freeMem/total.cloud.mem)
-pendingQueueSB %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
-pendingQueueSB %>% group_by(priority) %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
-pendingQueueFractionSB <- (pendingQueueSB %>% summarise(n()))/total.tasks
-
-# prod tasks constraint On
-allocationProdSB <- read.csv("server-based-results/prod-constraints-on-server-based/allocation-12477-hosts.csv")
-pendingQueueProdSB <- read.csv("server-based-results/prod-constraints-on-server-based/pending-queue-12477-hosts.csv")
-
-pendingQueueSize <- pendingQueueProdSB %>% summarise(n())
-allocationProdSB %>% summarise(total.cpu=sum(cpuCapacity), total.freeCpu=sum(freeCpu), cpu.fragmentation=total.freeCpu/total.cloud.cpu, total.mem=sum(memCapacity), total.freeMem=sum(freeMem), mem.fragmentation=total.freeMem/total.cloud.mem)
-pendingQueueProdSB %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
-(pendingQueueProdSB %>% summarise(n()))/total.prod.tasks
-
-# all tasks constraint Off
-allocationSBOff <- read.csv("server-based-results/all-constraints-off-server-based/allocation-12477-hosts.csv")
-pendingQueueSBOff <- read.csv("server-based-results/all-constraints-off-server-based/pending-queue-12477-hosts.csv")
-
-pendingQueueSize <- pendingQueueSBOff %>% summarise(n())
-allocationSBOff %>% summarise(total.cpu=sum(cpuCapacity), total.freeCpu=sum(freeCpu), cpu.fragmentation=total.freeCpu/total.cloud.cpu, total.mem=sum(memCapacity), total.freeMem=sum(freeMem), mem.fragmentation=total.freeMem/total.cloud.mem)
-pendingQueueSBOff %>% group_by(priority) %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
-(pendingQueueSBOff %>% summarise(n()))/total.tasks
-
-# prod tasks constraint Off
-allocationSBProdOff <- read.csv("server-based-results/prod-constraints-off-server-based/allocation-12477-hosts.csv")
-pendingQueueSBProdOff <- read.csv("server-based-results/prod-constraints-off-server-based/pending-queue-12477-hosts.csv")
-
-pendingQueueSize <- pendingQueueSBProdOff %>% summarise(n())
-allocationSBProdOff %>% summarise(total.cpu=sum(cpuCapacity), total.freeCpu=sum(freeCpu), cpu.fragmentation=total.freeCpu/total.cloud.cpu, total.mem=sum(memCapacity), total.freeMem=sum(freeMem), mem.fragmentation=total.freeMem/total.cloud.mem)
-pendingQueueSBProdOff %>% group_by(priority) %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
-(pendingQueueSBProdOff %>% summarise(n()))/total.tasks
-
-
-# DH-based server-size
-allocationDH <- read.csv("dh-based-results/all-constraint-on-dh-server-size-1-v2/allocation-11760-logicalservers.csv")
-pendingQueueDH <- read.csv("dh-based-results/all-constraint-on-dh-server-size-1-v2/pending-queue-11760-logicalservers.csv")
-
-allocationDH <- read.csv("dh-based-results/all-constraint-on-dh-server-size-1-v2/allocation-12479-logicalservers.csv")
-pendingQueueDH <- read.csv("dh-based-results/all-constraint-on-dh-server-size-1-v2/pending-queue-12479-logicalservers.csv")
-
-allocationDH <- read.csv("dh-based-results/all-constraint-on-dh-server-size-16-v2/allocation-9247-logicalservers.csv")
-pendingQueueDH <- read.csv("dh-based-results/all-constraint-on-dh-server-size-16-v2/pending-queue-9247-logicalservers.csv")
-
-allocationDH <- read.csv("dh-based-results/all-constraint-on-dh-server-size-16-v2/allocation-12483-logicalservers.csv")
-pendingQueueDH <- read.csv("dh-based-results/all-constraint-on-dh-server-size-16-v2/pending-queue-12483-logicalservers.csv")
-
-allocationDH <- read.csv("dh-based-results/all-constraint-off-dh-server-size-1/allocation-7210-logicalservers.csv")
-pendingQueueDH <- read.csv("dh-based-results/all-constraint-off-dh-server-size-1/pending-queue-7210-logicalservers.csv")
-
-allocationDH <- read.csv("dh-based-results/all-constraint-off-dh-server-size-1/allocation-12480-logicalservers.csv")
-pendingQueueDH <- read.csv("dh-based-results/all-constraint-off-dh-server-size-1/pending-queue-12480-logicalservers.csv")
-
-
-
-pendingQueueSize <- pendingQueueDH %>% summarise(n())
-allocationDH %>% summarise(total.cpu=sum(cpuCapacity), total.freeCpu=sum(freeCpu), cpu.fragmentation=total.freeCpu/total.cloud.cpu, total.mem=sum(memCapacity), total.freeMem=sum(freeMem), mem.fragmentation=total.freeMem/total.cloud.mem)
-pendingQueueDH %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
-(pendingQueueDH %>% summarise(n()))/total.tasks
-
-pendingQueueDH %>% group_by(priority) %>% summarise(n=n(), total.cpu=sum(cpuReq), total.mem=sum(memReq), perc.of.pending.queue=(n()/pendingQueueSize$`n()`))
-
-
-allocationDH %>% summarise(total.cpu=sum(cpuCapacity), total.freeCpu=sum(freeCpu), cpu.fragmentation=total.freeCpu/total.cloud.cpu, total.mem=sum(memCapacity), total.freeMem=sum(freeMem), mem.fragmentation=total.freeMem/total.cloud.mem)
-pendingQueueDH %>% group_by(priority) %>% summarise(n=n(), total.cpu=sum(cpuReq), cpu.pending.perct=total.cpu/total.cloud.cpu, total.mem=sum(memReq), mem.pending.perct=total.mem/total.cloud.mem)
-
-
-
-
-allocation <- read.csv("results-prod-with-constraints-server-centric-0/allocation-12477-hosts.csv")
-head(allocation) %>% mu
-pendingQueue <- read.csv("results-prod-with-constraints-server-centric-0/pending-queue-12477-hosts.csv")
-head(pendingQueue)
-
-allocation <- read.csv("results-all-with-constraints-server-centric-1/allocation-12477-hosts.csv")
-
-#infrastructure capacity
-allocation %>% summarise(total.cpu=sum(cpuCapacity), mean.cpu=mean(cpuCapacity), total.freeCpu=sum(freeCpu), total.mem=sum(memCapacity), total.freeMem=sum(freeMem))
-allocation %>% summary()
-
-
-# allocation of prod tasks in DH-based with server-size scenario 1
-allocationDH <- read.csv("results-prod-with-constraint-dh-server-size-scenario1/allocation-9822-logicalservers.csv")
-#pending-queue empty
-
-# allocation of prod tasks in DH-based with server-size scenario 2
-allocationDH <- read.csv("results-prod-with-constraint-dh-server-size-scenario2/allocation-8040-logicalservers.csv")
-
-allocationDH %>% summarise(total.cpu=sum(cpuCapacity), mean.cpu=mean(cpuCapacity), total.freeCpu=sum(freeCpu), total.mem=sum(memCapacity), total.freeMem=sum(freeMem))
-allocationDH %>% select(cpuCapacity, freeCpu) %>% summary()
-head(allocationDH)
-
-# allocation of all tasks in DH-based with server-size scenario 1
-allocationDH <- read.csv("results-all-with-constraint-dh-server-size-scenario1/allocation-12109-logicalservers.csv")
-#pending-queue 43233 tasks
-
-allocationTest <- read.csv("results-server-size-0407-prod/allocation-9057-logicalservers.csv")
-allocationTest %>% select(cpuCapacity, freeCpu) %>% summary()
-allocationTest %>% group_by(cpuPoolId) %>% summarise(total=n(), total.cpu=sum(cpuCapacity))
-
-# allocation of all tasks in DH-based with server-size scenario 2
-allocationDH <- read.csv("results-all-with-constraint-dh-server-size-scenario2/allocation-9166-logicalservers.csv")
-
-# allocation of all tasks in DH-based with server-size scenario 2
-allocationDH <- read.csv("results-all-with-constraint-dh-server-size-scenario3/allocation-9246-logicalservers.csv")
-p <- allocationDH %>% group_by(cpuPoolId) %>% summarise(total=n(), total.cpu=sum(cpuCapacity), mean.cpu=mean(cpuCapacity))
-
-allocationDH %>% summarise(total.cpu=sum(cpuCapacity), total.freeCpu=sum(freeCpu), total.mem=sum(memCapacity), total.freeMem=sum(freeMem))
-allocationDH %>% summary()
-head(allocationDH)
+PlotPendingFractionCI(pendingFractionRG)

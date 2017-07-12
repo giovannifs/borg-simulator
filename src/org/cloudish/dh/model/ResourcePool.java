@@ -177,4 +177,30 @@ public class ResourcePool {
 			throw new RuntimeException("The resource pool has a unkown pool type.");
 		}
 	}
+
+	public boolean match(Map<String, ResourceAttribute> attributes) {
+		if (poolType.equals(MEMORY_TYPE)) {
+			return true;
+		} else if (poolType.equals(CPU_TYPE)) {
+
+			for (String cpuAttribute : CPU_ATTRIBUTES) {
+				if (attributes.get(cpuAttribute) == null && getAttributes().get(cpuAttribute) != null) {
+					return false;
+				} else if (attributes.get(cpuAttribute) != null && getAttributes().get(cpuAttribute) == null) {
+					return false;
+
+					// check if attribute is configured in both and has
+					// different values
+				} else if (attributes.get(cpuAttribute) != null && getAttributes().get(cpuAttribute) != null) {
+
+					if (!attributes.get(cpuAttribute).equals(getAttributes().get(cpuAttribute))) {
+						return false;
+					}
+				}
+			}
+			return true;
+		} else {
+			throw new RuntimeException("The resource pool has a unkown pool type.");
+		}
+	}
 }

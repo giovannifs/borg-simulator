@@ -7,6 +7,8 @@ import java.util.Map;
 
 import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.ResourceAttribute;
+import org.cloudish.borg.model.Task;
+import org.cloudish.borg.model.TaskConstraint;
 import org.cloudish.dh.model.ResourcePool;
 import org.cloudish.score.KubernetesRankingScore;
 import org.junit.Assert;
@@ -388,5 +390,5 @@ public class TestUtils {
 		
 		Assert.assertEquals(0, GKValues.size());
 	}
-
+	
 }

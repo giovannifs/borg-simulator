@@ -28,6 +28,10 @@ public class LogicalServer extends Server {
 
 	public LogicalServer(ResourcePool cpuPool, ResourcePool memPool, double maxCPUCapacity,
 			double maxMemCapacity, double cpuResourceGrain, double memResourceGrain, DHManager dhManager, boolean isConstraintOn) {
+		if (memPool == null || cpuPool == null) {
+			throw new RuntimeException("The resource pools must be null value.");
+		}
+		
 		this.cpuPool = cpuPool;
 		this.memPool = memPool;
 		this.maxCpuCapacity = maxCPUCapacity;
