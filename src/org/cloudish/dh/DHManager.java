@@ -34,7 +34,8 @@ public class DHManager {
 		this.memResourceGrain = Double.parseDouble(properties.getProperty("mem_resource_grain"));
 		
 		this.constraintsOn = properties.getProperty("placement_constraints_on") == null
-				|| properties.getProperty("placement_constraints_on").equals("yes") ? true : false;
+				|| properties.getProperty("placement_constraints_on").equals("yes")
+				|| properties.getProperty("placement_constraints_on").equals("on") ? true : false;
 
 		this.maxCpuServerCapacity = Double.parseDouble(properties.getProperty("max_cpu_logical_server_capacity"));
 		this.maxMemServerCapacity = Double.parseDouble(properties.getProperty("max_memory_logical_server_capacity"));

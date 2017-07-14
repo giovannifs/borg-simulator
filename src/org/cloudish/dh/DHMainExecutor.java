@@ -37,7 +37,8 @@ public class DHMainExecutor {
 		List<Host> hosts = createHosts(infraFilePath);
 		
 		boolean isConstraintsOn = properties.getProperty("placement_constraints_on") == null
-				|| properties.getProperty("placement_constraints_on").equals("yes") ? true : false;
+				|| properties.getProperty("placement_constraints_on").equals("yes")
+				|| properties.getProperty("placement_constraints_on").equals("on") ? true : false;
 
 		System.out.println("isConstraintOn? " + (isConstraintsOn));
 		
