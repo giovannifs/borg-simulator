@@ -117,6 +117,14 @@ public class Task {
 		return attConstraints;
 	}
 	
+	public void setJid(long jid) {
+		this.jid = jid;
+	}
+
+	public void setTid(int tid) {
+		this.tid = tid;
+	}
+
 	@Override
 	public String toString() {
 		return "jid=" + getJid() + ", tid=" + getTid() + ", cpuReq=" + getCpuReq() + ", memReq=" + getMemReq()
