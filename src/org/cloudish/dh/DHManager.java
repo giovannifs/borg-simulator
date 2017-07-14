@@ -64,18 +64,13 @@ public class DHManager {
 		ResourcePool cpuPool = null;
 		ResourcePool memPool = null;
 		
-		// creating initial logical server, then it must choose cpuPool according to its size
 		if (task == null) {
-//			cpuPool = chooseCpuPoolRandomly();
-//			memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
-//			
 			throw new RuntimeException("Trying to allocatie a null task.");
 		} 
-//		else {
-			// choosing cpu resource pool
-			cpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
-			memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
-//		}
+
+		// choosing cpu resource pool
+		cpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
+		memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
 
 		// there is not any cpu or mem pool feasible to the task
 		if (cpuPool == null || memPool == null) {
@@ -85,20 +80,6 @@ public class DHManager {
 		return new LogicalServer(cpuPool, memPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
 				getCpuResourceGrain(), getMemResourceGrain(), this, isConstraintsOn());
 	}
-
-//	private ResourcePool chooseCpuPoolRandomly() {
-//		ResourcePool cpuPool;
-//		RandomCollection<ResourcePool> rc = new RandomCollection<ResourcePool>();
-//		
-//		for (ResourcePool pool : resourcePools.get(ResourcePool.CPU_TYPE)) {
-//			rc.add(pool.getFreeCapacity(), pool);				
-//		}
-//		
-//		cpuPool = rc.next();
-//		
-//		System.out.println(cpuPool.getId() + " - size: " + cpuPool.getCapacity());
-//		return cpuPool;
-//	}
 
 	private ResourcePool chooseResourcePool(String poolType, Task task) {
 		ResourcePool bestPool = null;
@@ -152,7 +133,6 @@ public class DHManager {
 
 	public boolean allocate(Task task) {
 		
-//		System.out.println("Allocating " + task);
 		double bestScore = -1;
 		List<LogicalServer> bestLogicalServers = new ArrayList<>();
 		
@@ -171,20 +151,43 @@ public class DHManager {
 		// There is not feasible logical server 
 		if (bestScore < 0 && bestLogicalServers.isEmpty()) {
 			System.out.println("There is not logical server feasible.");
-			
-			// create new logicalServer
-			LogicalServer newLServer = createLogicalServer(task);
-			
-			if (newLServer != null) {				
-				logicalServers.add(newLServer);
-				newLServer.allocate(task);
-				return true;
-			
-			} else { // there was not resource to create a new logical server that fulfills the task
+
+			// task is free
+			if (task.getPriority() <= 1) {
 				
+				ResourcePool cpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
+				ResourcePool memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
+
+				// the task could create a new server if it would not free one
+				if (cpuPool != null && memPool != null) {
+					task.setCouldCreateNewServer(true);
+				}
+
 				pendingQueue.add(task);
 				return false;
+				
+			} else {
+				// create new logicalServer
+				LogicalServer newLServer = createLogicalServer(task);
+				
+				if (newLServer != null && task.getPriority() <= 1) {
+					// a new server could be created but will not because the task is free
+					task.setCouldCreateNewServer(true);
+					
+				}
+				
+				if (newLServer != null) {				
+					logicalServers.add(newLServer);
+					newLServer.allocate(task);
+					return true;
+					
+				} else { // there was not resource to create a new logical server that fulfills the task
+					
+					pendingQueue.add(task);
+					return false;
+				}
 			}
+			
 		} else {
 			LogicalServer bestLServer = chooseBestLogicalServer(bestLogicalServers, task);
 			

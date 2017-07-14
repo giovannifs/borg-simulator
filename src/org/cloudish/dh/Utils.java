@@ -82,4 +82,8 @@ public class Utils {
 
         return doubleValue;
     }
+
+	public static int getInitialNumberOfServers(ResourcePool pool, double factor) {
+		return (int) Math.ceil(pool.getCapacity() / factor);
+	}
 }

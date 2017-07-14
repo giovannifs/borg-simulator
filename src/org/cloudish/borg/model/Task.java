@@ -12,6 +12,7 @@ public class Task {
 	private double memReq;
 	private int priority;
 	private boolean antiAffinity;
+	private boolean couldCreateNewServer;
 	private List<TaskConstraint> constraints = new ArrayList<TaskConstraint>();
 	
 //	#%% format {timestamp,task_id,job_id,cpu_req,mem_req,priority,diffMachine,constraints}
@@ -33,6 +34,7 @@ public class Task {
 		memReq = Double.parseDouble(st.nextToken().trim());
 		priority = Integer.parseInt(st.nextToken().trim());
 		antiAffinity = Integer.parseInt(st.nextToken().trim()) == 1;
+		couldCreateNewServer = false;
 		
 		if (tid < 0 || jid < 0 || cpuReq < 0 || memReq < 0 || priority < 0) {
 			throw new IllegalArgumentException("Task attributes must no be negative values.");
@@ -66,6 +68,7 @@ public class Task {
 		this.priority = priority;
 		this.antiAffinity = antiAffinity;
 		this.constraints = constraints;
+		this.couldCreateNewServer = false;
 	}
 
 	public long getJid() {
@@ -94,6 +97,14 @@ public class Task {
 
 	public int getPriority() {
 		return priority;
+	}
+	
+	public boolean isCouldCreateNewServer() {
+		return couldCreateNewServer;
+	}
+
+	public void setCouldCreateNewServer(boolean couldCreateNewServer) {
+		this.couldCreateNewServer = couldCreateNewServer;
 	}
 
 	public List<TaskConstraint> getConstraints(String attName) {

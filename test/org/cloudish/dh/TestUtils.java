@@ -7,8 +7,6 @@ import java.util.Map;
 
 import org.cloudish.borg.model.Host;
 import org.cloudish.borg.model.ResourceAttribute;
-import org.cloudish.borg.model.Task;
-import org.cloudish.borg.model.TaskConstraint;
 import org.cloudish.dh.model.ResourcePool;
 import org.cloudish.score.KubernetesRankingScore;
 import org.junit.Assert;
@@ -389,6 +387,53 @@ public class TestUtils {
 		List<String> GKValues = Utils.getPossibleGKValues(hosts);
 		
 		Assert.assertEquals(0, GKValues.size());
+	}
+	
+	@Test
+	public void testGetInitialNumberOfServers() {
+		ResourcePool pool = new ResourcePool(ResourcePool.CPU_TYPE, new HashMap<>());
+
+		// adding cpu capacity on pool
+		Host host = new Host(1, 0.5, 10, new KubernetesRankingScore(), new HashMap<>(), true);
+		pool.incorporateHost(host);
+		
+		Assert.assertEquals(0.5, pool.getCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(1, Utils.getInitialNumberOfServers(pool , 16));
+
+		// adding cpu capacity on pool
+		host = new Host(1, 9.5, 10, new KubernetesRankingScore(), new HashMap<>(), true);
+		pool.incorporateHost(host);
+		
+		Assert.assertEquals(10, pool.getCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(1, Utils.getInitialNumberOfServers(pool , 16));
+		
+		// adding more cpu capacity on pool
+		host = new Host(1, 6.1, 10, new KubernetesRankingScore(), new HashMap<>(), true);
+		pool.incorporateHost(host);
+		
+		Assert.assertEquals(16.1, pool.getCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(2, Utils.getInitialNumberOfServers(pool , 16));
+		
+		// adding more cpu capacity on pool
+		host = new Host(1, 16, 10, new KubernetesRankingScore(), new HashMap<>(), true);
+		pool.incorporateHost(host);
+		
+		Assert.assertEquals(32.1, pool.getCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(3, Utils.getInitialNumberOfServers(pool , 16));
+		
+		// adding more cpu capacity on pool
+		host = new Host(1, 11.9, 10, new KubernetesRankingScore(), new HashMap<>(), true);
+		pool.incorporateHost(host);
+		
+		Assert.assertEquals(44, pool.getCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(3, Utils.getInitialNumberOfServers(pool , 16));
+		
+		// adding more cpu capacity on pool
+		host = new Host(1, 685.5, 10, new KubernetesRankingScore(), new HashMap<>(), true);
+		pool.incorporateHost(host);
+		
+		Assert.assertEquals(729.5, pool.getCapacity(), ACCEPTABLE_DIFF);
+		Assert.assertEquals(46, Utils.getInitialNumberOfServers(pool , 16));
 	}
 	
 }

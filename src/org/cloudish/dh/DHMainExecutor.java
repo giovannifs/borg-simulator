@@ -62,22 +62,29 @@ public class DHMainExecutor {
 		
 		// creating DH-based infra considering blade DH model
 		if (dhModel.equals("blade")){
+			System.out.println("Running blade DH model...");
+			
 			for (Host host : hosts) {
 				LogicalServer logicalServer = dhManager.createLogicalServer(host.getAttributes());
 				dhManager.addLogicalServer(logicalServer);
 			}
 		} else if (dhModel.equals("drawer")) {
+			System.out.println("Running drawer DH model...");
+			
+			for (ResourcePool cpuPool : dhManager.getResourcePools().get(ResourcePool.CPU_TYPE)) {
+				int numberOfInitialServers = Utils.getInitialNumberOfServers(cpuPool, 16);
+				
+				// creating initial servers
+				for (int i = 0; i < numberOfInitialServers; i++) {
+					LogicalServer logicalServer = dhManager.createLogicalServer(cpuPool.getAttributes());
+					dhManager.addLogicalServer(logicalServer);
+				}
+			}
 			
 		} else {
 			throw new RuntimeException("Invalid DH model informed.");
 		}
 		
-//		while (dhManager.getLogicalServers().size() < dhManager.getMinLogicalServer()) {
-//			
-//			LogicalServer logicalServer = dhManager.createLogicalServer(null);
-//			dhManager.addLogicalServer(logicalServer);			
-//		}
-				
 		System.out.println("Execution initiated with " + dhManager.getLogicalServers().size() + " logical servers.");
 		
 		// allocating the tasks
@@ -108,9 +115,8 @@ public class DHMainExecutor {
 
 		double pendingQueueFraction = new Double(dhManager.getPendingQueue().size())/new Double(numberOfTasks);
 
-		 saveOutput(properties, outputDir, dhManager);
-//		 savePendingQueueInfo(outputDir, dhManager);
-
+		saveOutput(properties, outputDir, dhManager);
+		
 		System.out.println("logical-servers=" + dhManager.getLogicalServers().size());
 		System.out.println("pending-queue-tasks=" + dhManager.getPendingQueue().size());
 		System.out.println("pending-queue-fraction=" + pendingQueueFraction);
@@ -169,25 +175,11 @@ public class DHMainExecutor {
 		//writing pending queue
 		writer = new PrintWriter(outputDir + "/pending-queue-" + isConstraintsOn + "-" + dhModel + "-"
 				+ maxCpuServerCapacity + "-" + maxMemServerCapacity + "-" + nLogicalServers + "-servers.csv", "UTF-8");
-		writer.println("tid,jid,cpuReq,memReq,priority");
+		writer.println("tid,jid,cpuReq,memReq,priority,couldCreateServer");
 		for (Task task : dhManager.getPendingQueue()) {
 			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + ","
-					+ task.getPriority());
+					+ task.getPriority() + "," + task.isCouldCreateNewServer());
 		}
 		writer.close();
 	}
-	
-//	private static void savePendingQueueInfo(String outputDir, DHManager dhManager)
-//			throws FileNotFoundException, UnsupportedEncodingException {
-//		
-//		
-//		
-//		PrintWriter writer = new PrintWriter(
-//				outputDir + "/pending-queue-" + dhManager.getLogicalServers().size() + "-logicalservers.csv", "UTF-8");
-//		writer.println("tid,jid,cpuReq,memReq,priority");
-//		for (Task task : dhManager.getPendingQueue()) {
-//			writer.println(task.getTid() + "," + task.getJid() + "," + task.getCpuReq() + "," + task.getMemReq() + "," + task.getPriority());
-//		}
-//		writer.close();
-//	}
 }
