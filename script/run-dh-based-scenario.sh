@@ -29,7 +29,7 @@ for i in `seq $FIRST_TIME $LAST_TIME`; do
     sed -i -e 's/\$workload_path\$/timestamps\/all-tasks-time-'"$i"'-for-java.csv/g' $CONF_FILE
 
     # command
-#    java -cp borg-simulator.jar org.cloudish.dh.DHMainExecutor $CONF_FILE > log-$DH_MODEL-$CONSTRAINT-$GRAIN_LABEL-time"$i".out 2> log-$DH_MODEL-$CONSTRAINT-$GRAIN_LABEL-time"$i".err
-    cat $CONF_FILE
+    java -cp borg-simulator.jar org.cloudish.dh.DHMainExecutor $CONF_FILE > log-$DH_MODEL-$CONSTRAINT-$GRAIN_LABEL-time"$i".out 2> log-$DH_MODEL-$CONSTRAINT-$GRAIN_LABEL-time"$i".err
+#    cat $CONF_FILE
     rm $CONF_FILE
 done
