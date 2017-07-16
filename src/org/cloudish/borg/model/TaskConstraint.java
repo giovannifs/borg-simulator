@@ -40,4 +40,8 @@ public class TaskConstraint {
 	public String toString() {
 		return getAttName() + getOperator()  + getAttValue();
 	}
+	
+	public String lineFormat() {
+		return getAttName() + "," + getOperator() + "," + getAttValue();
+	}
 }

@@ -6,6 +6,7 @@ import java.util.StringTokenizer;
 
 public class Task {
 
+	private double time;
 	private long jid;
 	private int tid;
 	private double cpuReq;
@@ -27,7 +28,7 @@ public class Task {
 		constraintStr = constraintStr.replace("]", "").trim();
 		
 		st = new StringTokenizer(properties, ",");
-		st.nextToken(); //time
+		time = Double.parseDouble(st.nextToken()); //time
 		tid = Integer.parseInt(st.nextToken().trim());
 		jid = Long.parseLong(st.nextToken().trim());
 		cpuReq = Double.parseDouble(st.nextToken().trim());
@@ -143,5 +144,22 @@ public class Task {
 							&& getConstraints().containsAll(other.getConstraints()));
 		}
 		return false;
+	}
+
+	public String lineFormat() {
+		// 0,0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]
+
+		String constraintFormat = "";
+		for (TaskConstraint taskConstraint : getConstraints()) {
+			constraintFormat += taskConstraint.lineFormat() + ";";
+		}
+
+		// excluding last ;
+		if (!constraintFormat.isEmpty()) {
+			constraintFormat = constraintFormat.substring(0, constraintFormat.length() - 1);
+		}
+
+		return time + "," + getTid() + "," + getJid() + "," + getCpuReq() + "," + getMemReq() + "," + getPriority()
+				+ "," + (isAntiAffinity() ? "1" : "0") + "," + "[" + constraintFormat + "]";
 	}
 }

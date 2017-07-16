@@ -165,5 +165,35 @@ public class TestTask {
 		String taskLine = "0,0,4028922835,0.09375,0.03198,11,1,[Ql<14]";
 		new Task(taskLine);
 	}
+	
+	@Test
+	public void testLineFormat() {
+		String taskLine = "0,0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]";
+		Task t = new Task(taskLine);
+
+		Assert.assertEquals("0,0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]", t.lineFormat());
+	}
+	
+	@Test
+	public void testLineFormat2() {
+		String taskLine = "0,0,4028922835,0.09375,0.03198,11,1,[]";
+		Task t = new Task(taskLine);
+
+		Assert.assertEquals("0,0,4028922835,0.09375,0.03198,11,1,[]", t.lineFormat());
+	}
+
+	
+	@Test
+	public void testLineFormat3() {
+		String taskLine = "0,0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]";
+		Task t = new Task(taskLine);
+		
+		t.setJid(987654321);
+		t.setTid(23);
+
+		Assert.assertEquals("0,23,987654321,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]", t.lineFormat());
+	}
+	
+	
 
 }
