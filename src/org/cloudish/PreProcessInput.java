@@ -43,7 +43,7 @@ public class PreProcessInput {
 					
 					currentProcessingJob = task.getJid();
 					
-					if (task.getPriority() == 1) {
+					if (task.getPriority() == 11) {
 						if (currentProcessingJob == lastProcessingJob) {
 							tasksOfCurrentJob++;
 							
