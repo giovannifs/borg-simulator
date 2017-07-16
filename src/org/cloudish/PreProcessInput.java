@@ -51,7 +51,7 @@ public class PreProcessInput {
 								//create a new job id and update task info				
 								
 								Random r = new Random();							
-								long jid = r.nextLong();
+								long jid = r.nextInt(Integer.MAX_VALUE);
 								
 								while (existingJobs.contains(jid)) {
 									jid = r.nextLong();	
