@@ -343,6 +343,17 @@ PlotCpuFragmentationCI(cpuFragmentationsDiff)
 GenerateCIInfo(CalculateInfraCPUCI(diffBladeSmallOn))
 GenerateCIInfo(CalculateInfraMemCI(diffBladeSmallOn))
 
+GenerateCIInfo(CalculateInfraCPUCI(diffDrawerSmallOn))
+GenerateCIInfo(CalculateInfraMemCI(diffDrawerSmallOn))
+
+GenerateCIInfo(CalculateInfraCPUCI(diffBladeLargeOn))
+GenerateCIInfo(CalculateInfraMemCI(diffBladeLargeOn))
+
+
+GenerateCIInfo(CalculateInfraCPUCI(diffDrawerLargeOn))
+GenerateCIInfo(CalculateInfraMemCI(diffDrawerLargeOn))
+
+
 GenerateCIInfo(CalculateCpuFragmentationCI(diffBladeSmallOn))
 GenerateCIInfo(CalculateMemFragmentationCI(diffBladeSmallOn))
 GenerateCIInfo(CalculateServersCI(diffBladeSmallOn))
@@ -439,6 +450,9 @@ PlotServersCI(serversDiff)
 
 #Pending queue
 allSBPendingInfoOn <- CollectAllTimesSBPendingInfo("experiment-results-free-not-create-LS/sb-based-results", constraintOn = T, allTasks = T, nAllTasks)
+
+
+GenerateCIInfo(CalculateProdPendingFractionCI(allSBPendingInfoOn))
 
 allDHPendingBladeSmallOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "small-grain")
 allDHPendingBladeLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "large-grain")

@@ -33,6 +33,9 @@ public class DHManager {
 		this.cpuResourceGrain = Double.parseDouble(properties.getProperty("cpu_resource_grain"));		
 		this.memResourceGrain = Double.parseDouble(properties.getProperty("mem_resource_grain"));
 		
+		System.out.println("cpu-resource-grain? " + cpuResourceGrain);
+		System.out.println("mem-resource-grain? " + memResourceGrain);
+		
 		this.constraintsOn = properties.getProperty("placement_constraints_on") == null
 				|| properties.getProperty("placement_constraints_on").equals("yes")
 				|| properties.getProperty("placement_constraints_on").equals("on") ? true : false;

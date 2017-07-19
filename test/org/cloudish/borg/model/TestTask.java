@@ -50,7 +50,7 @@ public class TestTask {
 	@Test(expected = Exception.class)
 	public void testInvalidLine() {
 		// without time
-		String taskLine = "0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]";
+		String taskLine = "0.0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]";
 		new Task(taskLine);
 	}
 
@@ -171,7 +171,7 @@ public class TestTask {
 		String taskLine = "0,0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]";
 		Task t = new Task(taskLine);
 
-		Assert.assertEquals("0,0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]", t.lineFormat());
+		Assert.assertEquals("0.0,0,4028922835,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]", t.lineFormat());
 	}
 	
 	@Test
@@ -179,7 +179,7 @@ public class TestTask {
 		String taskLine = "0,0,4028922835,0.09375,0.03198,11,1,[]";
 		Task t = new Task(taskLine);
 
-		Assert.assertEquals("0,0,4028922835,0.09375,0.03198,11,1,[]", t.lineFormat());
+		Assert.assertEquals("0.0,0,4028922835,0.09375,0.03198,11,1,[]", t.lineFormat());
 	}
 
 	
@@ -191,7 +191,7 @@ public class TestTask {
 		t.setJid(987654321);
 		t.setTid(23);
 
-		Assert.assertEquals("0,23,987654321,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]", t.lineFormat());
+		Assert.assertEquals("0.0,23,987654321,0.09375,0.03198,11,1,[Ql,<,14;wN,==,2;Ql,>,4]", t.lineFormat());
 	}
 	
 	
