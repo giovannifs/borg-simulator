@@ -107,6 +107,8 @@ public class ResourcePool {
 	public void allocate(double resourceRequest) {
 		freeCapacity = Utils.format(freeCapacity - resourceRequest);
 
+		System.out.println(getId() + " - freeCapacity?" + freeCapacity);
+		
 		if (freeCapacity < 0) {
 			throw new RuntimeException(
 					"The resource pool allocated more than it could. Free capacity is lower than zero.");

@@ -9,6 +9,8 @@ import org.cloudish.dh.DHManager;
 import org.cloudish.dh.Utils;
 import org.cloudish.score.KubernetesRankingScore;
 
+import com.sun.crypto.provider.DHKeyAgreement;
+
 public class LogicalServer extends Server {
 
 	private double maxCpuCapacity;
@@ -23,11 +25,17 @@ public class LogicalServer extends Server {
 	private int minAllowedQlAtt;
 	private int maxAllowedQlAtt;
 	private boolean isConstraintOn;
+	private boolean isAntiAffinityOn; 
 	private DHManager dhManager;
 	
-
 	public LogicalServer(ResourcePool cpuPool, ResourcePool memPool, double maxCPUCapacity,
 			double maxMemCapacity, double cpuResourceGrain, double memResourceGrain, DHManager dhManager, boolean isConstraintOn) {
+		this(cpuPool, memPool, maxCPUCapacity, maxMemCapacity, cpuResourceGrain, memResourceGrain, dhManager, isConstraintOn, isConstraintOn);
+	}
+
+	public LogicalServer(ResourcePool cpuPool, ResourcePool memPool, double maxCPUCapacity, double maxMemCapacity,
+			double cpuResourceGrain, double memResourceGrain, DHManager dhManager, boolean isConstraintOn,
+			boolean isAntiAffinityOn) {
 		if (memPool == null || cpuPool == null) {
 			throw new RuntimeException("The resource pools must be null value.");
 		}
@@ -40,6 +48,7 @@ public class LogicalServer extends Server {
 		this.memResourceGrain = memResourceGrain;
 		this.dhManager = dhManager;
 		this.isConstraintOn = isConstraintOn;
+		this.isAntiAffinityOn = isAntiAffinityOn;
 		
 		// creating minimal logical server 
 		getCpuPool().allocate(getCpuResourceGrain());
@@ -79,12 +88,14 @@ public class LogicalServer extends Server {
 	}
 
 	protected boolean isFeasible(Task task) {
-		if (isConstraintOn) {
+		if (isAntiAffinityOn) {
 			if (jidAllocated.contains(task.getJid())) {
 //			System.out.println("Logical Server is not feasible because of antiaffinity constraint.");
 				return false;
 			}
-			
+		}
+		
+		if (isConstraintOn) {			
 			// check if the resource pools are feasible for task
 			if (!cpuPool.isFeasible(task) || !memPool.isFeasible(task)) {
 //			System.out.println("Logical Server is not feasible because of pool attributes.");
@@ -109,7 +120,7 @@ public class LogicalServer extends Server {
 			double cpuToBeRequested = calcCpuToBeRequested(task);
 			
 			if (!cpuPool.hasMoreResource(cpuToBeRequested) || exceedCpuMaxCapacity(cpuToBeRequested)) {
-//				System.out.println("Logical Server is not feasible because pool does not have more resource or exceed cpu capacity.");
+//				System.out.println("LS can not be scaledUp on CPU");
 				return false;
 			}
 		}
@@ -118,8 +129,9 @@ public class LogicalServer extends Server {
 			double memToBeRequested = calcMemToBeRequested(task);
 			
 			if (!memPool.hasMoreResource(memToBeRequested) || exceedMemMaxCapacity(memToBeRequested)) {
+//				System.out.println("LS can not be scaledUp on RAM");
 				return false;
-			} 
+			}
 		}
 
 		return true;
@@ -240,12 +252,14 @@ public class LogicalServer extends Server {
 		// allocating the task
 		freeCPU = Utils.format(freeCPU - task.getCpuReq());
 		freeMem = Utils.format(freeMem - task.getMemReq());
-		
-		if (isConstraintOn()) {
+
+		if (isAntiAffinityOn()) {
 			if (task.isAntiAffinity()) {
 				jidAllocated.add(task.getJid());		
 			}
+		}
 			
+		if (isConstraintOn()) {
 			// treat GK and Ql attributes
 			treatGKAttr(task);
 			treatQlAttr(task);
@@ -374,7 +388,11 @@ public class LogicalServer extends Server {
 	public boolean isConstraintOn() {
 		return isConstraintOn;
 	}
-	
+		
+	public boolean isAntiAffinityOn() {
+		return isAntiAffinityOn;
+	}
+
 	protected void setConstraintOn(boolean isConstraintOn) {
 		this.isConstraintOn = isConstraintOn;
 	}	

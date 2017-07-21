@@ -42,6 +42,12 @@ public class DHMainExecutor {
 
 		System.out.println("isConstraintOn? " + (isConstraintsOn));
 		
+		boolean isAntiAffinityOn = properties.getProperty("anti_affinity_constraint_on") == null
+				|| properties.getProperty("anti_affinity_constraint_on").equals("yes")
+				|| properties.getProperty("anti_affinity_constraint_on").equals("on") ? true : false;
+		
+		System.out.println("isAntiAffinityOn? " + (isAntiAffinityOn));
+		
 		Map<String, List<ResourcePool>> resourcePools = Utils.createResourcePoolsFromHosts(hosts, isConstraintsOn);
 		
 		System.out.println("How many MemPool? " + resourcePools.get(ResourcePool.MEMORY_TYPE).size());
@@ -82,6 +88,13 @@ public class DHMainExecutor {
 				}
 			}
 			
+		} else if (dhModel.equals("unlimited")) {
+			System.out.println("Running unlimited DH model...");
+			
+			for (ResourcePool cpuPool : dhManager.getResourcePools().get(ResourcePool.CPU_TYPE)) {
+				LogicalServer logicalServer = dhManager.createLogicalServer(cpuPool.getAttributes());
+				dhManager.addLogicalServer(logicalServer);				
+			}
 		} else {
 			throw new RuntimeException("Invalid DH model informed.");
 		}

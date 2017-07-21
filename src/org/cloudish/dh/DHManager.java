@@ -24,6 +24,7 @@ public class DHManager {
 	private double maxMemServerCapacity;
 	
 	private boolean constraintsOn = true;
+	private boolean isAntiAffinityOn = true;
 	
 	public DHManager(Properties properties, Map<String, List<ResourcePool>> resourcePools, List<String> possibleGKValues) {
 		if (resourcePools.isEmpty()) {
@@ -39,10 +40,18 @@ public class DHManager {
 		this.constraintsOn = properties.getProperty("placement_constraints_on") == null
 				|| properties.getProperty("placement_constraints_on").equals("yes")
 				|| properties.getProperty("placement_constraints_on").equals("on") ? true : false;
+		
+		this.isAntiAffinityOn = properties.getProperty("anti_affinity_constraint_on") == null
+				|| properties.getProperty("anti_affinity_constraint_on").equals("yes")
+				|| properties.getProperty("anti_affinity_constraint_on").equals("on") ? true : false;
 
 		this.maxCpuServerCapacity = Double.parseDouble(properties.getProperty("max_cpu_logical_server_capacity"));
 		this.maxMemServerCapacity = Double.parseDouble(properties.getProperty("max_memory_logical_server_capacity"));
 		this.resourcePools = resourcePools;
+		
+		System.out.println("max_cpu_logical_server_capacity? " + maxCpuServerCapacity);
+		System.out.println("max_cpu_logical_server_capacity? " + maxMemServerCapacity);
+		
 		
 		for (String gkValue : possibleGKValues) {
 			this.possibleGKValues.put(gkValue, null);
@@ -61,10 +70,12 @@ public class DHManager {
 		}
 		
 		return new LogicalServer(cpuPool, memPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
-				getCpuResourceGrain(), getMemResourceGrain(), this, isConstraintsOn());
+				getCpuResourceGrain(), getMemResourceGrain(), this, isConstraintsOn(), isAntiAffinityOn());
 	}
 	
 	public LogicalServer createLogicalServer(Task task) {		
+		System.out.println("Creating new Logical Server for task " + task);
+		
 		ResourcePool cpuPool = null;
 		ResourcePool memPool = null;
 		
@@ -76,18 +87,22 @@ public class DHManager {
 		cpuPool = chooseResourcePool(ResourcePool.CPU_TYPE, task);
 		memPool = chooseResourcePool(ResourcePool.MEMORY_TYPE, task);
 
+		System.out.println("chosen CPU Pool?" + cpuPool.getId() );
+		System.out.println("chosen CPU Pool free Capacity?" + cpuPool.getFreeCapacity());
 		// there is not any cpu or mem pool feasible to the task
 		if (cpuPool == null || memPool == null) {
 			return null;
 		}
 		
 		return new LogicalServer(cpuPool, memPool, getMaxCpuServerCapacity(), getMaxMemServerCapacity(),
-				getCpuResourceGrain(), getMemResourceGrain(), this, isConstraintsOn());
+				getCpuResourceGrain(), getMemResourceGrain(), this, isConstraintsOn(), isAntiAffinityOn());
 	}
 
 	private ResourcePool chooseResourcePool(String poolType, Task task) {
 		ResourcePool bestPool = null;
 		double bestPoolScore = -1;
+		
+//		List<ResourcePool> feasiblePools = new ArrayList<ResourcePool>();
 		
 		for (ResourcePool resourcePool : resourcePools.get(poolType)) {
 			
@@ -101,14 +116,28 @@ public class DHManager {
 			
 			if (resourcePool.isFeasible(task) && resourcePool.hasMoreResource(resourceToBeRequested)) {
 
+//				feasiblePools.add(resourcePool);
+
 				// calculating score
 				double cpuScore = resourcePool.getScore();
 				if (cpuScore > bestPoolScore) {
 					bestPool = resourcePool;
 					bestPoolScore = cpuScore;
 				}
-			}
+			}		
 		}
+		
+//		if (!feasiblePools.isEmpty()) {
+//			Collections.sort(feasiblePools, new Comparator<ResourcePool>() {
+//
+//				@Override
+//				public int compare(ResourcePool o1, ResourcePool o2) {
+//					return (-1) * new Double(o1.getScore()).compareTo(new Double(o2.getScore()));
+//				}
+//			});
+//			
+//			bestPool = feasiblePools.get(new Random().nextInt(Math.min(feasiblePools.size(), 3)));
+//		}
 		return bestPool;
 	}
 	
@@ -262,6 +291,10 @@ public class DHManager {
 	
 	public boolean isConstraintsOn() {
 		return constraintsOn;
+	}	
+
+	public boolean isAntiAffinityOn() {
+		return isAntiAffinityOn;
 	}
 
 	public boolean isGKValueAvailable(String GKValue) {

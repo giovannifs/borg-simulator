@@ -218,6 +218,12 @@ PlotCpuFragmentationCI <- function(fragmentations) {
   
 }
 
+PlotCpuInfraCI <- function(fragmentations) {
+  ggplot(fragmentations, aes(x=infra, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower)) + ylab("CPU") + xlab("Infrastructure") +  
+    ggtitle(paste("CI of difference in CPU infra", sep="")) + expand_limits(y=0)
+  
+}
+
 PlotMemFragmentationCI <- function(fragmentations) { #}, constraintOn) {
   #if (constraintOn) {
     ggplot(fragmentations, aes(x=infra, y=mean * 100)) + geom_point() + geom_errorbar(aes(ymax = upper*100, ymin=lower*100)) + ylab("% of RAM fragmentation") + xlab("Infrastructure") +  
@@ -274,6 +280,152 @@ GenerateCIInfo <- function(ConfidenceInterval) {
   return(paste(ConfidenceInterval$mean, " +- ", error, " -- error is ", error/ConfidenceInterval$mean, " of mean. ",  sep = ""))
 }
 
+ProcessCPUData <- function() {
+  allSBAllocationsOn <- CollectAllTimesSBAllocationInfo("experiment-results-more-grains/sb-based-results", constraintOn = T, allTasks = T)
+  
+  resultDir <- "experiment-results-more-grains/dh-based-results"
+  
+  #small
+  allDHAllocBladeCPUMiniOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-mini")
+  allDHAllocBladeCPUSmallOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-small")
+  allDHAllocBladeCPUMediumOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-medium")
+  allDHAllocBladeCPULargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-large")
+  allDHAllocBladeCPUXLargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-xlarge")
+  
+  #drawer
+  allDHAllocDrawerCPUMiniOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-mini")
+  allDHAllocDrawerCPUSmallOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-small")
+  allDHAllocDrawerCPUMediumOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-medium")
+  allDHAllocDrawerCPULargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-large")
+  allDHAllocDrawerCPUXLargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-xlarge")
+  
+  diffBladeCPUMiniOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMiniOn)
+  diffBladeCPUSmallOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUSmallOn)
+  diffBladeCPUMediumOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMediumOn)
+  diffBladeCPULargeOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPULargeOn)
+  diffBladeCPUXLargeOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUXLargeOn)
+  
+  diffDrawerCPUMiniOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUMiniOn)
+  diffDrawerCPUSmallOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUSmallOn)
+  diffDrawerCPUMediumOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUMediumOn)
+  diffDrawerCPULargeOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPULargeOn)
+  diffDrawerCPUXLargeOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUXLargeOn)
+
+  # cpu fragmentation
+  cpuFragmentationsDiff <- data.frame()
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-micro", CalculateCpuFragmentationCI(diffBladeCPUMiniOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-small", CalculateCpuFragmentationCI(diffBladeCPUSmallOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-medium", CalculateCpuFragmentationCI(diffBladeCPUMediumOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-large", CalculateCpuFragmentationCI(diffBladeCPULargeOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-xlarge", CalculateCpuFragmentationCI(diffBladeCPUXLargeOn)))
+  
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-micro", CalculateCpuFragmentationCI(diffDrawerCPUMiniOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-small", CalculateCpuFragmentationCI(diffDrawerCPUSmallOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-medium", CalculateCpuFragmentationCI(diffDrawerCPUMediumOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-large", CalculateCpuFragmentationCI(diffDrawerCPULargeOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-xlarge", CalculateCpuFragmentationCI(diffDrawerCPUXLargeOn)))
+  
+  PlotCpuFragmentationCI(cpuFragmentationsDiff)
+  
+  #mem fragmentation
+  memFragmentationsDiff <- data.frame()
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-micro", CalculateMemFragmentationCI(diffBladeCPUMiniOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-small", CalculateMemFragmentationCI(diffBladeCPUSmallOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-medium", CalculateMemFragmentationCI(diffBladeCPUMediumOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-large", CalculateMemFragmentationCI(diffBladeCPULargeOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-xlarge", CalculateMemFragmentationCI(diffBladeCPUXLargeOn)))
+
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-micro", CalculateMemFragmentationCI(diffDrawerCPUMiniOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-small", CalculateMemFragmentationCI(diffDrawerCPUSmallOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-medium", CalculateMemFragmentationCI(diffDrawerCPUMediumOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-large", CalculateMemFragmentationCI(diffDrawerCPULargeOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-xlarge", CalculateMemFragmentationCI(diffDrawerCPUXLargeOn)))
+  
+  PlotMemFragmentationCI(memFragmentationsDiff)
+  
+  cpuInfraDiff <- data.frame()
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-micro", CalculateInfraCPUCI(diffBladeCPUMiniOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-small", CalculateInfraCPUCI(diffBladeCPUSmallOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-medium", CalculateInfraCPUCI(diffBladeCPUMediumOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-large", CalculateInfraCPUCI(diffBladeCPULargeOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-xlarge", CalculateInfraCPUCI(diffBladeCPUXLargeOn)))
+  
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-micro", CalculateInfraCPUCI(diffDrawerCPUMiniOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-small", CalculateInfraCPUCI(diffDrawerCPUSmallOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-medium", CalculateInfraCPUCI(diffDrawerCPUMediumOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-large", CalculateInfraCPUCI(diffDrawerCPULargeOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-xlarge", CalculateInfraCPUCI(diffDrawerCPUXLargeOn)))
+  
+  PlotCpuInfraCI(cpuInfraDiff)
+  
+  GenerateCIInfo(CalculateInfraCPUCI(diffBladeSmallOn))
+  
+  # instead of diffe between SB and SH, we should plot the additional number of hosts
+  serversDiff <- data.frame()
+  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-micro", CalculateServersCI(diffBladeCPUMiniOn)))
+  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-small", CalculateServersCI(diffBladeCPUSmallOn)))
+  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-medium", CalculateServersCI(diffBladeCPUMediumOn)))
+  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-large", CalculateServersCI(diffBladeCPULargeOn)))
+  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-xlarge", CalculateServersCI(diffBladeCPUXLargeOn)))
+  
+  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-micro", CalculateServersCI(diffDrawerCPUMiniOn)))
+  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-small", CalculateServersCI(diffDrawerCPUSmallOn)))
+  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-medium", CalculateServersCI(diffDrawerCPUMediumOn)))
+  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-large", CalculateServersCI(diffDrawerCPULargeOn)))
+  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-xlarge", CalculateServersCI(diffDrawerCPUXLargeOn)))
+  
+  PlotServersCI(serversDiff)
+  
+  
+  
+}
+
+
+ProcessPendingCPUData <- function() {
+  nAllTasks <- read.csv("number_of_tasks.txt")
+  nProdTasks <- read.csv("number_of_prod_tasks.txt")
+  
+  allSBPendingInfoOn <- CollectAllTimesSBPendingInfo("experiment-results-more-grains/sb-based-results", constraintOn = T, allTasks = T, nAllTasks)
+  
+  resultDir <- "experiment-results-more-grains/dh-based-results"
+  
+  allDHPendingBladeMiniOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-mini")
+  allDHPendingBladeSmallOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-small")
+  allDHPendingBladeMediumOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-medium")
+  allDHPendingBladeLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-large")
+  allDHPendingBladeXLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-xlarge")
+
+  diffPendBladeMiniOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeMiniOn)
+  diffPendBladeSmallOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeSmallOn)
+  diffPendBladeMediumOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeMediumOn)
+  diffPendBladeLargeOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeLargeOn)
+  diffPendBladeXLargeOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeXLargeOn)
+  
+  
+  # pending queue fraction
+  pendingFractionDiff <- data.frame()
+  pendingFractionDiff<- rbind(pendingFractionDiff, data.frame(infra = "blade-on-small", CalculatePendingFractionCI(diffPendBladeSmallOn)))
+  
+  
+  PlotPendingFractionCI(pendingFractionDiff)
+  
+  pendingCpuCIDiff <- data.frame()
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-micro", CalculatePendingCpuCI(diffPendBladeMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-small", CalculatePendingCpuCI(diffPendBladeSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-medium", CalculatePendingCpuCI(diffPendBladeMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-large", CalculatePendingCpuCI(diffPendBladeLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-xlarge", CalculatePendingCpuCI(diffPendBladeXLargeOn)))
+  
+  PlotPendingCpuCI(pendingCpuCIDiff)
+  
+  pendingMemCIDiff <- data.frame()
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = "blade-on-small", CalculatePendingMemCI(diffPendBladeSmallOn)))
+  
+  
+  PlotPendingMemCI(pendingMemCIDiff)
+  
+}
+
 nAllTasks <- read.csv("number_of_tasks.txt")
 nProdTasks <- read.csv("number_of_prod_tasks.txt")
 
@@ -293,6 +445,30 @@ allSBProdPendingInfoOff <- CollectAllTimesSBPendingInfo("experiment-results/sb-b
 
 resultDir <- "experiment-results-free-not-create-LS/dh-based-results"
 resultDir <- "experiment-results/dh-based-results"
+resultDir <- "experiment-results-more-grains/dh-based-results"
+
+allocation <- CollectAllocationInfo("experiment-results-more-grains/dh-based-results/time3/cpu-small/allocation-on-blade-1-1-12713-servers.csv")
+allocation <- CollectAllocationInfo("experiment-results-free-not-create-LS/dh-based-results/time2/small-grain/allocation-on-blade-1-1-12713-servers.csv")
+allocation <- CollectAllocationInfo("test-results-server-size-1907/allocation-on-blade-1-1-12761-servers.csv")
+allocation <- read.csv("test-results-server-size-1907/allocation-on-unlimited-6605-6605-9497-servers.csv")
+allocation <- read.csv("test-results-server-size-1907anti-off/allocation-on-unlimited-6605-6605-34-servers.csv")
+allocation <- read.csv("test-results-server-size-1907anti-on-const-off/allocation-off-unlimited-6605-6605-6068-servers.csv")
+
+allocation <- read.csv("experiment-results-free-not-create-LS/dh-based-results/time2/small-grain/allocation-on-drawer-16-16-8996-servers.csv")
+allocation2 <- read.csv("experiment-results-free-not-create-LS/dh-based-results/time2/small-grain/allocation-on-blade-1-1-12713-servers.csv")
+
+allocation %>% filter(cpuCapacity > 10) 
+allocation %>% filter(cpuPoolId == "cpu-pool:[o/=0;rs=0;By=4;wN=2;P8=0;w2=1;9e=2;nZ=2;w5=1]") %>% summary()
+                                    
+summary(allocation)
+
+cp <-allocation %>% group_by(cpuPoolId) %>% dplyr::summarise(servers=n(), total.cpu=sum(cpuCapacity)) %>% dplyr::summarise(total=sum(total.cpu))
+data.frame(cp)
+
+
+allDHAllocBladeCPUMediumOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-medium")
+allDHAllocBladeCPULargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-large")
+allDHAllocBladeCPUXLargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-xlarge")
 
 # collecting and ploting the CI od the difference
 allSBAllocationsOn <- CollectAllTimesSBAllocationInfo("experiment-results-free-not-create-LS/sb-based-results", constraintOn = T, allTasks = T)

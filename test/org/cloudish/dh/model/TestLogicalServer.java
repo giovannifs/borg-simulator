@@ -99,6 +99,18 @@ public class TestLogicalServer {
 	}
 	
 	@Test
+	public void testAllocate() {
+		// anti affinity task
+		logicalServer.allocate(new Task(0, 10, 0.05, 0.05, 11, true, new ArrayList<>()));
+		
+		Assert.assertEquals(1, logicalServer.getJidAllocated().size());
+		Assert.assertTrue(logicalServer.getJidAllocated().contains(10l));
+		
+		// anti affinity task
+		Assert.assertFalse(logicalServer.isFeasible(new Task(1, 10, 0.05, 0.05, 11, true, new ArrayList<>())));
+	}
+	
+	@Test
 	public void testIsFeasible() {		
 		// task requiring lower capacity
 		Task task = new Task(0, 10, 0.05, 0.05, 11, false, new ArrayList<>());
