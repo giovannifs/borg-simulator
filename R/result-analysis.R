@@ -34,6 +34,18 @@ CollectPendingInfo <- function(csvPath) {
   return(pendSummary)
 }
 
+CollectPendingRequestPerPriority <- function(csvPath) {
+  pendingQueue <- read.csv(csvPath)
+  #pendingQueue <- read.csv("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
+  
+  #head(pendingQueue)
+  pendingRequestPerPriority <- pendingQueue %>% group_by(priority) %>% dplyr::summarise(tasks=n(), cpu.request=sum(cpuReq), mem.request=sum(memReq))
+  #pendSummary <- pendingQueue %>% mutate(prod=ifelse(priority>=9, 1, 0)) %>% mutate(nonprod=ifelse(priority<9, 1, 0)) %>% dplyr::summarise(tasks=n(), prod=sum(prod), nonprod.tasks=sum(nonprod), total.cpu=sum(cpuReq), total.mem=sum(memReq))
+
+  pendingRequestPerPriority <- pendingRequestPerPriority %>% mutate(all.pend.tasks=sum(tasks), all.pend.cpu.req=sum(cpu.request), all.pend.mem.req=sum(mem.request))  
+  return(pendingRequestPerPriority)
+}
+
 CollectAllTimesSBAllocationInfo <- function(resultDir, constraintOn, allTasks) {
   constraint <- "on"
   
@@ -181,6 +193,12 @@ CalculateServersCI <- function(allocation) {
   return(t)
 }
 
+CalculateAdittionalServersCI <- function(allocation, initialServers) {
+  t <- data.frame(upper = CI(allocation$servers - initialServers, ci = 0.95)[1], mean = CI(allocation$servers  - initialServers, ci = 0.95)[2], lower = CI(allocation$servers - initialServers, ci = 0.95)[3])
+  return(t)
+}
+
+
 CalculateInfraCPUCI <- function(allocation) {
   t <- data.frame(upper = CI(allocation$infra.cpu, ci = 0.95)[1], mean = CI(allocation$infra.cpu, ci = 0.95)[2], lower = CI(allocation$infra.cpu, ci = 0.95)[3])
   return(t)
@@ -284,20 +302,22 @@ ProcessCPUData <- function() {
   allSBAllocationsOn <- CollectAllTimesSBAllocationInfo("experiment-results-more-grains/sb-based-results", constraintOn = T, allTasks = T)
   
   resultDir <- "experiment-results-more-grains/dh-based-results"
+  grainVarying <- "cpu"
+  grainVarying <- "ram"
   
-  #small
-  allDHAllocBladeCPUMiniOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-mini")
-  allDHAllocBladeCPUSmallOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-small")
-  allDHAllocBladeCPUMediumOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-medium")
-  allDHAllocBladeCPULargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-large")
-  allDHAllocBladeCPUXLargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = "cpu-xlarge")
+  #blade
+  allDHAllocBladeCPUMiniOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = paste(grainVarying, "-mini", sep=""))
+  allDHAllocBladeCPUSmallOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = paste(grainVarying, "-small", sep=""))
+  allDHAllocBladeCPUMediumOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = paste(grainVarying, "-medium", sep=""))
+  allDHAllocBladeCPULargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = paste(grainVarying, "-large", sep=""))
+  allDHAllocBladeCPUXLargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", resourceLabel = paste(grainVarying, "-xlarge", sep=""))
   
   #drawer
-  allDHAllocDrawerCPUMiniOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-mini")
-  allDHAllocDrawerCPUSmallOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-small")
-  allDHAllocDrawerCPUMediumOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-medium")
-  allDHAllocDrawerCPULargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-large")
-  allDHAllocDrawerCPUXLargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-xlarge")
+  allDHAllocDrawerCPUMiniOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = paste(grainVarying, "-mini", sep=""))
+  allDHAllocDrawerCPUSmallOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = paste(grainVarying, "-small", sep=""))
+  allDHAllocDrawerCPUMediumOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = paste(grainVarying, "-medium", sep=""))
+  allDHAllocDrawerCPULargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = paste(grainVarying, "-large", sep=""))
+  allDHAllocDrawerCPUXLargeOn <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", resourceLabel = paste(grainVarying, "-xlarge", sep=""))
   
   diffBladeCPUMiniOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMiniOn)
   diffBladeCPUSmallOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUSmallOn)
@@ -313,71 +333,68 @@ ProcessCPUData <- function() {
 
   # cpu fragmentation
   cpuFragmentationsDiff <- data.frame()
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-micro", CalculateCpuFragmentationCI(diffBladeCPUMiniOn)))
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-small", CalculateCpuFragmentationCI(diffBladeCPUSmallOn)))
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-medium", CalculateCpuFragmentationCI(diffBladeCPUMediumOn)))
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-large", CalculateCpuFragmentationCI(diffBladeCPULargeOn)))
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "blade-cpu-xlarge", CalculateCpuFragmentationCI(diffBladeCPUXLargeOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-micro", sep=""), CalculateCpuFragmentationCI(diffBladeCPUMiniOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-small", sep=""), CalculateCpuFragmentationCI(diffBladeCPUSmallOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-medium", sep=""), CalculateCpuFragmentationCI(diffBladeCPUMediumOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-large", sep=""), CalculateCpuFragmentationCI(diffBladeCPULargeOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-xlarge", sep=""), CalculateCpuFragmentationCI(diffBladeCPUXLargeOn)))
   
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-micro", CalculateCpuFragmentationCI(diffDrawerCPUMiniOn)))
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-small", CalculateCpuFragmentationCI(diffDrawerCPUSmallOn)))
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-medium", CalculateCpuFragmentationCI(diffDrawerCPUMediumOn)))
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-large", CalculateCpuFragmentationCI(diffDrawerCPULargeOn)))
-  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = "drawer-cpu-xlarge", CalculateCpuFragmentationCI(diffDrawerCPUXLargeOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-micro", sep=""), CalculateCpuFragmentationCI(diffDrawerCPUMiniOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-small", sep=""), CalculateCpuFragmentationCI(diffDrawerCPUSmallOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-medium", sep=""), CalculateCpuFragmentationCI(diffDrawerCPUMediumOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-large", sep=""), CalculateCpuFragmentationCI(diffDrawerCPULargeOn)))
+  cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-xlarge", sep=""), CalculateCpuFragmentationCI(diffDrawerCPUXLargeOn)))
   
   PlotCpuFragmentationCI(cpuFragmentationsDiff)
   
   #mem fragmentation
   memFragmentationsDiff <- data.frame()
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-micro", CalculateMemFragmentationCI(diffBladeCPUMiniOn)))
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-small", CalculateMemFragmentationCI(diffBladeCPUSmallOn)))
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-medium", CalculateMemFragmentationCI(diffBladeCPUMediumOn)))
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-large", CalculateMemFragmentationCI(diffBladeCPULargeOn)))
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "blade-cpu-xlarge", CalculateMemFragmentationCI(diffBladeCPUXLargeOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-micro", sep=""), CalculateMemFragmentationCI(diffBladeCPUMiniOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-small", sep=""), CalculateMemFragmentationCI(diffBladeCPUSmallOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-medium", sep=""), CalculateMemFragmentationCI(diffBladeCPUMediumOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-large", sep=""), CalculateMemFragmentationCI(diffBladeCPULargeOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("blade-", grainVarying, "-xlarge", sep=""), CalculateMemFragmentationCI(diffBladeCPUXLargeOn)))
 
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-micro", CalculateMemFragmentationCI(diffDrawerCPUMiniOn)))
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-small", CalculateMemFragmentationCI(diffDrawerCPUSmallOn)))
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-medium", CalculateMemFragmentationCI(diffDrawerCPUMediumOn)))
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-large", CalculateMemFragmentationCI(diffDrawerCPULargeOn)))
-  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = "drawer-cpu-xlarge", CalculateMemFragmentationCI(diffDrawerCPUXLargeOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-micro", sep=""), CalculateMemFragmentationCI(diffDrawerCPUMiniOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-small", sep=""), CalculateMemFragmentationCI(diffDrawerCPUSmallOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-medium", sep=""), CalculateMemFragmentationCI(diffDrawerCPUMediumOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-large", sep=""), CalculateMemFragmentationCI(diffDrawerCPULargeOn)))
+  memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(infra = paste("drawer-", grainVarying, "-xlarge", sep=""), CalculateMemFragmentationCI(diffDrawerCPUXLargeOn)))
   
   PlotMemFragmentationCI(memFragmentationsDiff)
   
   cpuInfraDiff <- data.frame()
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-micro", CalculateInfraCPUCI(diffBladeCPUMiniOn)))
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-small", CalculateInfraCPUCI(diffBladeCPUSmallOn)))
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-medium", CalculateInfraCPUCI(diffBladeCPUMediumOn)))
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-large", CalculateInfraCPUCI(diffBladeCPULargeOn)))
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "blade-cpu-xlarge", CalculateInfraCPUCI(diffBladeCPUXLargeOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("blade-", grainVarying, "-micro", sep=""), CalculateInfraCPUCI(diffBladeCPUMiniOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("blade-", grainVarying, "-small", sep=""), CalculateInfraCPUCI(diffBladeCPUSmallOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("blade-", grainVarying, "-medium", sep=""), CalculateInfraCPUCI(diffBladeCPUMediumOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("blade-", grainVarying, "-large", sep=""), CalculateInfraCPUCI(diffBladeCPULargeOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("blade-", grainVarying, "-xlarge", sep=""), CalculateInfraCPUCI(diffBladeCPUXLargeOn)))
   
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-micro", CalculateInfraCPUCI(diffDrawerCPUMiniOn)))
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-small", CalculateInfraCPUCI(diffDrawerCPUSmallOn)))
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-medium", CalculateInfraCPUCI(diffDrawerCPUMediumOn)))
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-large", CalculateInfraCPUCI(diffDrawerCPULargeOn)))
-  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = "drawer-cpu-xlarge", CalculateInfraCPUCI(diffDrawerCPUXLargeOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-", grainVarying, "-micro", sep=""), CalculateInfraCPUCI(diffDrawerCPUMiniOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-", grainVarying, "-small", sep=""), CalculateInfraCPUCI(diffDrawerCPUSmallOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-", grainVarying, "-medium", sep=""), CalculateInfraCPUCI(diffDrawerCPUMediumOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-", grainVarying, "-large", sep=""), CalculateInfraCPUCI(diffDrawerCPULargeOn)))
+  cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-", grainVarying, "-xlarge", sep=""), CalculateInfraCPUCI(diffDrawerCPUXLargeOn)))
   
   PlotCpuInfraCI(cpuInfraDiff)
   
   GenerateCIInfo(CalculateInfraCPUCI(diffBladeSmallOn))
   
   # instead of diffe between SB and SH, we should plot the additional number of hosts
-  serversDiff <- data.frame()
-  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-micro", CalculateServersCI(diffBladeCPUMiniOn)))
-  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-small", CalculateServersCI(diffBladeCPUSmallOn)))
-  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-medium", CalculateServersCI(diffBladeCPUMediumOn)))
-  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-large", CalculateServersCI(diffBladeCPULargeOn)))
-  serversDiff<- rbind(serversDiff, data.frame(infra = "blade-cpu-xlarge", CalculateServersCI(diffBladeCPUXLargeOn)))
+  adittionalServers <- data.frame()
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("blade-", grainVarying, "-micro", sep=""), CalculateAdittionalServersCI(allDHAllocBladeCPUMiniOn, 12477)))
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("blade-", grainVarying, "-small", sep=""), CalculateAdittionalServersCI(allDHAllocBladeCPUSmallOn, 12477)))
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("blade-", grainVarying, "-medium", sep=""), CalculateAdittionalServersCI(allDHAllocBladeCPUMediumOn, 12477)))
+  additionalServers<- rbind(adittionalServers, data.frame(infra = paste("blade-", grainVarying, "-large", sep=""), CalculateAdittionalServersCI(allDHAllocBladeCPULargeOn, 12477)))
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("blade-", grainVarying, "-xlarge", sep=""), CalculateAdittionalServersCI(allDHAllocBladeCPUXLargeOn, 12477)))
   
-  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-micro", CalculateServersCI(diffDrawerCPUMiniOn)))
-  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-small", CalculateServersCI(diffDrawerCPUSmallOn)))
-  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-medium", CalculateServersCI(diffDrawerCPUMediumOn)))
-  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-large", CalculateServersCI(diffDrawerCPULargeOn)))
-  serversDiff<- rbind(serversDiff, data.frame(infra = "drawer-cpu-xlarge", CalculateServersCI(diffDrawerCPUXLargeOn)))
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("drawer-", grainVarying, "-micro", sep=""), CalculateAdittionalServersCI(allDHAllocDrawerCPUMiniOn, 434)))
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("drawer-", grainVarying, "-small", sep=""), CalculateAdittionalServersCI(allDHAllocDrawerCPUSmallOn, 434)))
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("drawer-", grainVarying, "-medium", sep=""), CalculateAdittionalServersCI(allDHAllocDrawerCPUMediumOn, 434)))
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("drawer-", grainVarying, "-large", sep=""), CalculateAdittionalServersCI(allDHAllocDrawerCPULargeOn, 434)))
+  adittionalServers<- rbind(adittionalServers, data.frame(infra = paste("drawer-", grainVarying, "-xlarge", sep=""), CalculateAdittionalServersCI(allDHAllocDrawerCPUXLargeOn, 434)))
   
-  PlotServersCI(serversDiff)
-  
-  
-  
+  PlotServersCI(additionalServers)
 }
 
 
@@ -388,20 +405,33 @@ ProcessPendingCPUData <- function() {
   allSBPendingInfoOn <- CollectAllTimesSBPendingInfo("experiment-results-more-grains/sb-based-results", constraintOn = T, allTasks = T, nAllTasks)
   
   resultDir <- "experiment-results-more-grains/dh-based-results"
+  grainVarying <- "cpu"
+  grainVarying <- "ram"
   
-  allDHPendingBladeMiniOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-mini")
-  allDHPendingBladeSmallOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-small")
-  allDHPendingBladeMediumOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-medium")
-  allDHPendingBladeLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-large")
-  allDHPendingBladeXLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-xlarge")
+  allDHPendingBladeMiniOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = paste(grainVarying, "-mini", sep=""))
+  allDHPendingBladeSmallOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = paste(grainVarying, "-small", sep=""))
+  allDHPendingBladeMediumOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = paste(grainVarying, "-medium", sep=""))
+  allDHPendingBladeLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = paste(grainVarying, "-large", sep=""))
+  allDHPendingBladeXLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = paste(grainVarying, "-xlarge", sep=""))
 
+  allDHPendingDrawerMiniOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-mini", sep=""))
+  allDHPendingDrawerSmallOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-small", sep=""))
+  allDHPendingDrawerMediumOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-medium", sep=""))
+  allDHPendingDrawerLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-large", sep=""))
+  allDHPendingDrawerXLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-xlarge", sep=""))
+  
   diffPendBladeMiniOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeMiniOn)
   diffPendBladeSmallOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeSmallOn)
   diffPendBladeMediumOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeMediumOn)
   diffPendBladeLargeOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeLargeOn)
   diffPendBladeXLargeOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeXLargeOn)
   
-  
+  diffPendDrawerMiniOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerMiniOn)
+  diffPendDrawerSmallOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerSmallOn)
+  diffPendDrawerMediumOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerMediumOn)
+  diffPendDrawerLargeOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerLargeOn)
+  diffPendDrawerXLargeOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerXLargeOn)
+
   # pending queue fraction
   pendingFractionDiff <- data.frame()
   pendingFractionDiff<- rbind(pendingFractionDiff, data.frame(infra = "blade-on-small", CalculatePendingFractionCI(diffPendBladeSmallOn)))
@@ -410,18 +440,33 @@ ProcessPendingCPUData <- function() {
   PlotPendingFractionCI(pendingFractionDiff)
   
   pendingCpuCIDiff <- data.frame()
-  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-micro", CalculatePendingCpuCI(diffPendBladeMiniOn)))
-  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-small", CalculatePendingCpuCI(diffPendBladeSmallOn)))
-  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-medium", CalculatePendingCpuCI(diffPendBladeMediumOn)))
-  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-large", CalculatePendingCpuCI(diffPendBladeLargeOn)))
-  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = "blade-cpu-xlarge", CalculatePendingCpuCI(diffPendBladeXLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-", grainVarying, "-micro", sep=""), CalculatePendingCpuCI(diffPendBladeMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-", grainVarying, "-small", sep=""), CalculatePendingCpuCI(diffPendBladeSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-", grainVarying, "-medium", sep=""), CalculatePendingCpuCI(diffPendBladeMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-", grainVarying, "-large", sep=""), CalculatePendingCpuCI(diffPendBladeLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-", grainVarying, "-xlarge", sep=""), CalculatePendingCpuCI(diffPendBladeXLargeOn)))
   
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-micro", sep=""), CalculatePendingCpuCI(diffPendDrawerMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-small", sep=""), CalculatePendingCpuCI(diffPendDrawerSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-medium", sep=""), CalculatePendingCpuCI(diffPendDrawerMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-large", sep=""), CalculatePendingCpuCI(diffPendDrawerLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-xlarge", sep=""), CalculatePendingCpuCI(diffPendDrawerXLargeOn)))
+
   PlotPendingCpuCI(pendingCpuCIDiff)
   
   pendingMemCIDiff <- data.frame()
-  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = "blade-on-small", CalculatePendingMemCI(diffPendBladeSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-", grainVarying, "-micro", sep=""), CalculatePendingMemCI(diffPendBladeMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-", grainVarying, "-small", sep=""), CalculatePendingMemCI(diffPendBladeSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-", grainVarying, "-medium", sep=""), CalculatePendingMemCI(diffPendBladeMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-", grainVarying, "-large", sep=""), CalculatePendingMemCI(diffPendBladeLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-", grainVarying, "-xlarge", sep=""), CalculatePendingMemCI(diffPendBladeXLargeOn)))
   
-  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-micro", sep=""), CalculatePendingMemCI(diffPendDrawerMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-small", sep=""), CalculatePendingMemCI(diffPendDrawerSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-medium", sep=""), CalculatePendingMemCI(diffPendDrawerMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-large", sep=""), CalculatePendingMemCI(diffPendDrawerLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-", grainVarying, "-xlarge", sep=""), CalculatePendingMemCI(diffPendDrawerXLargeOn)))
+
   PlotPendingMemCI(pendingMemCIDiff)
   
 }
