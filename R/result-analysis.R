@@ -27,10 +27,12 @@ CollectAllocationInfo <- function(csvPath) {
 
 CollectPendingInfo <- function(csvPath) {
   pendingQueue <- read.csv(csvPath)
-  #pendingQueue <- read.csv("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
+ # pendingQueue <- read.csv("server-based-results/all-constraints-on-server-based/pending-queue-12477-hosts.csv")
 
   #head(pendingQueue)
-  pendSummary <- pendingQueue %>% mutate(prod=ifelse(priority>=9, 1, 0)) %>% mutate(nonprod=ifelse(priority<9, 1, 0)) %>% dplyr::summarise(tasks=n(), prod=sum(prod), nonprod.tasks=sum(nonprod), total.cpu=sum(cpuReq), total.mem=sum(memReq))
+#  pendSummary <- pendingQueue %>% mutate(prod=ifelse(priority>=9, 1, 0)) %>% mutate(nonprod=ifelse(priority<9, 1, 0)) %>% dplyr::summarise(tasks=n(), prod=sum(prod), nonprod.tasks=sum(nonprod), total.cpu=sum(cpuReq), total.mem=sum(memReq))
+  pendSummary <- pendingQueue %>% mutate(prod.cpu=ifelse(priority>=9, cpuReq, 0)) %>% mutate(prod.mem=ifelse(priority>=9, memReq, 0)) %>% mutate(nonprod.cpu=ifelse(priority<9 & priority >1, cpuReq, 0)) %>% mutate(nonprod.mem=ifelse(priority<9 & priority > 1, memReq, 0)) %>% mutate(free.cpu=ifelse(priority<2, cpuReq, 0)) %>% mutate(free.mem=ifelse(priority< 2, memReq, 0)) %>% dplyr::summarise(tasks=n(), total.prod.cpu=sum(prod.cpu), total.prod.mem=sum(prod.mem), total.nonprod.cpu=sum(nonprod.cpu), total.nonprod.mem=sum(nonprod.mem), total.free.cpu=sum(free.cpu), total.free.mem=sum(free.mem), total.cpu=sum(cpuReq), total.mem=sum(memReq))
+  pendSummary <- pendSummary %>% mutate(prodCpuQueue=total.prod.cpu/total.cpu * 100, prodMemQueue=total.prod.mem/total.mem *100, nonprodCpuOnQueue=total.nonprod.cpu/total.cpu, nonprodMemOnQueue=total.nonprod.mem/total.mem, freeCpuOnQueue=total.free.cpu/total.cpu, freeMemOnQueue=total.free.mem/total.mem)
   return(pendSummary)
 }
 
@@ -79,6 +81,8 @@ CollectAllTimesSBPendingInfo <- function(resultDir, constraintOn, allTasks, numb
   
   allPendingInfo <- data_frame()
   for (time in 1:28) {
+    #time <- 1
+    #resultDir <- "experiment-results-more-grains/sb-based-results"
     print(time)
     
     timePending <- CollectPendingInfo(paste(resultDir,"/time",time,"/", workload, "/pending-queue-", constraint,"-12477-hosts.csv", sep = ""))
@@ -87,12 +91,19 @@ CollectAllTimesSBPendingInfo <- function(resultDir, constraintOn, allTasks, numb
     cpu.demand <- resourceDemand %>% filter(timestamp == time) %>% select(cpu.request)
     mem.demand <- resourceDemand %>% filter(timestamp == time) %>% select(mem.request)
     
-    timePending <- data.frame(timePending, nTasks = total.tasks, cpuDemand=cpu.demand, memDemand=mem.demand)
+    prod.cpu.demand <- resourceDemand %>% filter(timestamp == time) %>% select(prod.cpu.demand)
+    prod.mem.demand <- resourceDemand %>% filter(timestamp == time) %>% select(prod.mem.demand)
+    nonprod.cpu.demand <- resourceDemand %>% filter(timestamp == time) %>% select(nonprod.cpu.demand)
+    nonprod.mem.demand <- resourceDemand %>% filter(timestamp == time) %>% select(nonprod.mem.demand)
+    free.cpu.demand <- resourceDemand %>% filter(timestamp == time) %>% select(free.cpu.demand)
+    free.mem.demand<- resourceDemand %>% filter(timestamp == time) %>% select(free.mem.demand)
+    
+    timePending <- data.frame(timePending, nTasks = total.tasks, prodCpuDemand=prod.cpu.demand, prodMemDemand=prod.mem.demand, nonProdCpuDemand=nonprod.cpu.demand, nonProdMemDemand=nonprod.mem.demand, freeCpuDemand=free.cpu.demand, freeMemDemand=free.mem.demand, cpuDemand=cpu.demand, memDemand=mem.demand)
     
     allPendingInfo <- rbind(allPendingInfo, timePending)
   }
   
-  allPendingInfo <- allPendingInfo %>% mutate(pendingFraction=tasks/nTasks, cpuOnQueue=total.cpu/cpu.request, memOnQueue=total.mem/mem.request)
+  allPendingInfo <- allPendingInfo %>% mutate(pendingFraction=tasks/nTasks, prodCpuOnQueue=total.prod.cpu/prod.cpu.demand, prodMemOnQueue=total.prod.mem/prod.mem.demand, nonprodCpuOnQueue=total.nonprod.cpu/nonprod.cpu.demand, nonprodMemOnQueue=total.nonprod.mem/nonprod.mem.demand, freeCpuOnQueue=total.free.cpu/free.cpu.demand, freeMemOnQueue=total.free.mem/free.mem.demand, cpuOnQueue=total.cpu/cpu.request, memOnQueue=total.mem/mem.request)
   #allPendingInfo <- allPendingInfo %>% mutate(pendingFraction=tasks/nTasks)
   
   return(allPendingInfo)
@@ -171,8 +182,17 @@ CollectAllTimesDHPendingInfo <- function(resultDir, constraintOn, allTasks = T, 
         total.tasks <- numberOfTasks %>% filter(timestamp == time) %>% select(nTasks)
         cpu.demand <- resourceDemand %>% filter(timestamp == time) %>% select(cpu.request)
         mem.demand <- resourceDemand %>% filter(timestamp == time) %>% select(mem.request)
+      
+        prod.cpu.demand <- resourceDemand %>% filter(timestamp == time) %>% select(prod.cpu.demand)
+        prod.mem.demand <- resourceDemand %>% filter(timestamp == time) %>% select(prod.mem.demand)
+        nonprod.cpu.demand <- resourceDemand %>% filter(timestamp == time) %>% select(nonprod.cpu.demand)
+        nonprod.mem.demand <- resourceDemand %>% filter(timestamp == time) %>% select(nonprod.mem.demand)
+        free.cpu.demand <- resourceDemand %>% filter(timestamp == time) %>% select(free.cpu.demand)
+        free.mem.demand<- resourceDemand %>% filter(timestamp == time) %>% select(free.mem.demand)
         
-        timePending <- data.frame(timePending, nTasks = total.tasks, cpuDemand=cpu.demand, memDemand=mem.demand)
+        timePending <- data.frame(timePending, nTasks = total.tasks, prodCpuDemand=prod.cpu.demand, prodMemDemand=prod.mem.demand, nonProdCpuDemand=nonprod.cpu.demand, nonProdMemDemand=nonprod.mem.demand, freeCpuDemand=free.cpu.demand, freeMemDemand=free.mem.demand, cpuDemand=cpu.demand, memDemand=mem.demand)
+        
+        #timePending <- data.frame(timePending, nTasks = total.tasks, cpuDemand=cpu.demand, memDemand=mem.demand)
         
         allPendingInfo <- rbind(allPendingInfo, timePending)
         break
@@ -180,7 +200,8 @@ CollectAllTimesDHPendingInfo <- function(resultDir, constraintOn, allTasks = T, 
     }
     
   }
-  allPendingInfo <- allPendingInfo %>% mutate(pendingFraction=tasks/nTasks, cpuOnQueue=total.cpu/cpu.request, memOnQueue=total.mem/mem.request)
+  allPendingInfo <- allPendingInfo %>% mutate(pendingFraction=tasks/nTasks, prodCpuOnQueue=total.prod.cpu/prod.cpu.demand, prodMemOnQueue=total.prod.mem/prod.mem.demand, nonprodCpuOnQueue=total.nonprod.cpu/nonprod.cpu.demand, nonprodMemOnQueue=total.nonprod.mem/nonprod.mem.demand, freeCpuOnQueue=total.free.cpu/free.cpu.demand, freeMemOnQueue=total.free.mem/free.mem.demand, cpuOnQueue=total.cpu/cpu.request, memOnQueue=total.mem/mem.request)
+#  allPendingInfo <- allPendingInfo %>% mutate(pendingFraction=tasks/nTasks, cpuOnQueue=total.cpu/cpu.request, memOnQueue=total.mem/mem.request)
 
   return(allPendingInfo)
 }
@@ -207,12 +228,12 @@ CalculateAdittionalServersCI <- function(allocation, initialServers) {
 
 
 CalculateInfraCPUCI <- function(allocation) {
-  t <- data.frame(upper = CI(allocation$infra.cpu, ci = 0.95)[1], mean = CI(allocation$infra.cpu, ci = 0.95)[2], lower = CI(allocation$infra.cpu, ci = 0.95)[3])
+  t <- data.frame(upper = CI(allocation$infra.cpu, ci = 0.95)[1]/6603.25 * 100, mean = CI(allocation$infra.cpu, ci = 0.95)[2]/6603.25* 100, lower = CI(allocation$infra.cpu, ci = 0.95)[3]/6603.25* 100)
   return(t)
 }
 
 CalculateInfraMemCI <- function(allocation) {
-  t <- data.frame(upper = CI(allocation$infra.mem, ci = 0.95)[1], mean = CI(allocation$infra.mem, ci = 0.95)[2], lower = CI(allocation$infra.mem, ci = 0.95)[3])
+  t <- data.frame(upper = CI(allocation$infra.mem, ci = 0.95)[1]/5862.751 * 100, mean = CI(allocation$infra.mem, ci = 0.95)[2]/5862.751 * 100, lower = CI(allocation$infra.mem, ci = 0.95)[3]/5862.751 * 100)
   return(t)
 }
 
@@ -242,6 +263,36 @@ CalculateMemOnQueueCI <- function(pendingInfo) {
   return(t)
 }
 
+CalculateProdCpuOnQueueCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(pendingInfo$prodCpuOnQueue * 100, ci = 0.95)[1], mean = CI(pendingInfo$prodCpuOnQueue * 100, ci = 0.95)[2], lower = CI(pendingInfo$prodCpuOnQueue * 100, ci = 0.95)[3])
+  return(t)
+}
+
+CalculateProdMemOnQueueCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(pendingInfo$prodMemOnQueue * 100, ci = 0.95)[1], mean = CI(pendingInfo$prodMemOnQueue * 100, ci = 0.95)[2], lower = CI(pendingInfo$prodMemOnQueue * 100, ci = 0.95)[3])
+  return(t)
+}
+
+CalculateNonProdCpuOnQueueCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(pendingInfo$nonprodCpuOnQueue * 100, ci = 0.95)[1], mean = CI(pendingInfo$nonprodCpuOnQueue * 100, ci = 0.95)[2], lower = CI(pendingInfo$nonprodCpuOnQueue * 100, ci = 0.95)[3])
+  return(t)
+}
+
+CalculateNonProdMemOnQueueCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(pendingInfo$nonprodMemOnQueue * 100, ci = 0.95)[1], mean = CI(pendingInfo$nonprodMemOnQueue * 100, ci = 0.95)[2], lower = CI(pendingInfo$nonprodMemOnQueue * 100, ci = 0.95)[3])
+  return(t)
+}
+
+CalculateFreeCpuOnQueueCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(pendingInfo$freeCpuOnQueue * 100, ci = 0.95)[1], mean = CI(pendingInfo$freeCpuOnQueue * 100, ci = 0.95)[2], lower = CI(pendingInfo$freeCpuOnQueue * 100, ci = 0.95)[3])
+  return(t)
+}
+
+CalculateFreeMemOnQueueCI <- function(pendingInfo) {
+  t <- data.frame(upper = CI(pendingInfo$freeMemOnQueue * 100, ci = 0.95)[1], mean = CI(pendingInfo$freeMemOnQueue * 100, ci = 0.95)[2], lower = CI(pendingInfo$freeMemOnQueue * 100, ci = 0.95)[3])
+  return(t)
+}
+
 CalculatePendingMemCI <- function(pendingInfo) {
   t <- data.frame(upper = CI(pendingInfo$total.mem, ci = 0.95)[1], mean = CI(pendingInfo$total.mem, ci = 0.95)[2], lower = CI(pendingInfo$total.mem, ci = 0.95)[3]) 
   return(t)
@@ -253,14 +304,19 @@ PlotCpuFragmentationCI <- function(fragmentations) {
   
 }
 
+#PlotCpuInfraCI <- function(fragmentations) {
+#  ggplot(fragmentations, aes(x=infra, y=mean/6603.25*100)) + geom_point() + geom_errorbar(aes(ymax = upper/6603.25*100, ymin=lower/6603.25*100)) + ylab("CPU (%)") + xlab("Infrastructure") +  #    ggtitle(paste("CI of difference in CPU infra", sep="")) + expand_limits(y=0)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#  
+#}
+
 PlotCpuInfraCI <- function(fragmentations) {
-  ggplot(fragmentations, aes(x=infra, y=mean/6603.25*100)) + geom_point() + geom_errorbar(aes(ymax = upper/6603.25*100, ymin=lower/6603.25*100)) + ylab("CPU (%)") + xlab("Infrastructure") +  
+  ggplot(fragmentations, aes(x=infra, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower)) + ylab("CPU (%)") + xlab("Infrastructure") +  
     ggtitle(paste("CI of difference in CPU infra", sep="")) + expand_limits(y=0)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
 }
 
 PlotMemInfraCI <- function(fragmentations) {
-  ggplot(fragmentations, aes(x=infra, y=mean/5862.751 * 100)) + geom_point() + geom_errorbar(aes(ymax = upper/5862.751* 100, ymin=lower/5862.751* 100)) + ylab("RAM (%)") + xlab("Infrastructure") +  
+  ggplot(fragmentations, aes(x=infra, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower)) + ylab("RAM (%)") + xlab("Infrastructure") +  
     ggtitle(paste("CI of difference in RAM infra", sep="")) + expand_limits(y=0) + expand_limits(y=0)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
 }
@@ -306,6 +362,11 @@ PlotCpuOnQueueCI <- function(pendingCpuCI) {
     ggtitle(paste("CI of difference of % of total cpu requested that are in pending queue", sep="")) + expand_limits(y=0) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 }
 
+PlotMemOnQueueCI <- function(pendingCpuCI) {
+  ggplot(pendingCpuCI, aes(x=infra, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower)) + ylab("requested RAM (%)") + xlab("Infrastructure") +  
+    ggtitle(paste("CI of difference of % of total RAM requested that are in pending queue", sep="")) + expand_limits(y=0) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+}
+
 PlotPendingMemCI <- function(pendingMemCI) {
   ggplot(pendingMemCI, aes(x=infra, y=mean)) + geom_point() + geom_errorbar(aes(ymax = upper, ymin=lower)) + ylab("requested RAM") + xlab("Infrastructure") +  
     ggtitle(paste("CI of difference of RAM requested by tasks in pending queue", sep="")) + expand_limits(y=0) + theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -335,8 +396,8 @@ GenerateWorkloadInfo <- function() {
     submittedTasks <- read.table(paste("/local/giovanni/git/borg-simulator/timestamps/all-tasks-info-time-", time, "-for-java.csv", sep =""), sep = ",")
     colnames(submittedTasks) <- c("submitTime", "tid", "jid", "cpuReq", "memReq", "priority", "diffMachine")
     
-    resourceDemand <- submittedTasks %>% summarise(timestamp = time, cpu.request=sum(cpuReq), mem.request=sum(memReq))
-    
+    resourceDemand <- submittedTasks %>% mutate(prod.cpu=ifelse(priority>=9, cpuReq, 0)) %>% mutate(prod.mem=ifelse(priority>=9, memReq, 0)) %>% mutate(nonprod.cpu=ifelse(priority<9 & priority >1, cpuReq, 0)) %>% mutate(nonprod.mem=ifelse(priority<9 & priority > 1, memReq, 0)) %>% mutate(free.cpu=ifelse(priority<2, cpuReq, 0)) %>% mutate(free.mem=ifelse(priority< 2, memReq, 0)) %>% summarise(timestamp = time, prod.cpu.demand=sum(prod.cpu), prod.mem.demand=sum(prod.mem), nonprod.cpu.demand=sum(nonprod.cpu), nonprod.mem.demand=sum(nonprod.mem), free.cpu.demand=sum(free.cpu), free.mem.demand=sum(free.mem), cpu.request=sum(cpuReq), mem.request=sum(memReq))
+
     workloadInfo <- rbind(workloadInfo, resourceDemand)
   }
   
@@ -392,7 +453,28 @@ ProcessCPUData <- function() {
   diffDrawerCPUMiniOff <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUMiniOff)
   diffDrawerCPUMediumOff <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUMediumOff)
   diffDrawerCPUXLargeOff <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUXLargeOff)
-
+  
+  WriteDataInFile(diffBladeCPUMiniOn, "diff-allocation-blade-ram-micro.csv")
+  WriteDataInFile(diffBladeCPUSmallOn, "diff-allocation-blade-ram-small.csv")
+  WriteDataInFile(diffBladeCPUMediumOn, "diff-allocation-blade-ram-medium.csv")
+  WriteDataInFile(diffBladeCPULargeOn, "diff-allocation-blade-ram-large.csv")
+  WriteDataInFile(diffBladeCPUXLargeOn, "diff-allocation-blade-ram-xlarge.csv")
+  
+  WriteDataInFile(diffDrawerCPUMiniOn, "diff-allocation-drawer-ram-micro.csv")
+  WriteDataInFile(diffDrawerCPUSmallOn, "diff-allocation-drawer-ram-small.csv")
+  WriteDataInFile(diffDrawerCPUMediumOn, "diff-allocation-drawer-ram-medium.csv")
+  WriteDataInFile(diffDrawerCPULargeOn, "diff-allocation-drawer-ram-large.csv")
+  WriteDataInFile(diffDrawerCPUXLargeOn, "diff-allocation-drawer-ram-xlarge.csv")
+  
+  WriteDataInFile(diffDrawerCPUMiniPreOn, "diff-allocation-drawer-ram-micro-pre.csv")
+  WriteDataInFile(diffDrawerCPUMediumPreOn, "diff-allocation-drawer-ram-medium-pre.csv")
+  WriteDataInFile(diffDrawerCPUXLargePreOn, "diff-allocation-drawer-ram-xlarge-pre.csv")
+  
+  WriteDataInFile(diffDrawerCPUMiniOff, "diff-allocation-drawer-ram-micro-off.csv")
+  WriteDataInFile(diffDrawerCPUMediumOff, "diff-allocation-drawer-ram-medium-off.csv")
+  WriteDataInFile(diffDrawerCPUXLargeOff, "diff-allocation-drawer-ram-xlarge-off.csv")
+  
+  
   # cpu fragmentation
   cpuFragmentationsDiff <- data.frame()
   cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateCpuFragmentationCI(diffBladeCPUMiniOn)))
@@ -447,6 +529,14 @@ ProcessCPUData <- function() {
   cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateInfraCPUCI(diffDrawerCPULargeOn)))
   cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateInfraCPUCI(diffDrawerCPUXLargeOn)))
   
+  cpuInfraDiff<- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateInfraCPUCI(diffDrawerCPUMiniPreOn)))
+  cpuInfraDiff<- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateInfraCPUCI(diffDrawerCPUMediumPreOn)))
+  cpuInfraDiff<- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateInfraCPUCI(diffDrawerCPUXLargePreOn)))
+  
+  cpuInfraDiff<- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateInfraCPUCI(diffDrawerCPUMiniOff)))
+  cpuInfraDiff<- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateInfraCPUCI(diffDrawerCPUMediumOff)))
+  cpuInfraDiff<- rbind(cpuInfraDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateInfraCPUCI(diffDrawerCPUXLargeOff)))
+  
   PlotCpuInfraCI(cpuInfraDiff)
   
   GenerateCIInfo(CalculateInfraCPUCI(diffBladeSmallOn))
@@ -463,6 +553,14 @@ ProcessCPUData <- function() {
   memInfraDiff <- rbind(memInfraDiff, data.frame(infra = paste("drawer-medium", sep=""), CalculateInfraMemCI(diffDrawerCPUMediumOn)))
   memInfraDiff <- rbind(memInfraDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateInfraMemCI(diffDrawerCPULargeOn)))
   memInfraDiff <- rbind(memInfraDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateInfraMemCI(diffDrawerCPUXLargeOn)))
+  
+  memInfraDiff<- rbind(memInfraDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateInfraMemCI(diffDrawerCPUMiniPreOn)))
+  memInfraDiff<- rbind(memInfraDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateInfraMemCI(diffDrawerCPUMediumPreOn)))
+  memInfraDiff<- rbind(memInfraDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateInfraMemCI(diffDrawerCPUXLargePreOn)))
+  
+  memInfraDiff<- rbind(memInfraDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateInfraMemCI(diffDrawerCPUMiniOff)))
+  memInfraDiff<- rbind(memInfraDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateInfraMemCI(diffDrawerCPUMediumOff)))
+  memInfraDiff<- rbind(memInfraDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateInfraMemCI(diffDrawerCPUXLargeOff)))
   
   PlotMemInfraCI(memInfraDiff)
   
@@ -492,6 +590,9 @@ ProcessCPUData <- function() {
   PlotServersCI(adittionalServers)
 }
 
+WriteDataInFile <- function(data, fileName) {
+  write.table(data, file = fileName, row.names = FALSE, col.names = TRUE, quote = FALSE)
+}
 
 ProcessPendingCPUData <- function() {
   nAllTasks <- read.csv("number_of_tasks.txt")
@@ -499,6 +600,12 @@ ProcessPendingCPUData <- function() {
   resourceDemand <- GenerateWorkloadInfo()
   
   allSBPendingInfoOn <- CollectAllTimesSBPendingInfo("experiment-results-more-grains/sb-based-results", constraintOn = T, allTasks = T, nAllTasks, resourceDemand)
+  
+  allSBPendingInfoOn <- allSBPendingInfoOn %>% mutate(prodCpuQueue=total.prod.cpu/total.cpu * 100, prodMemQueue=total.prod.mem/total.mem *100, nonprodCpuOnQueue=total.nonprod.cpu/total.cpu, nonprodMemOnQueue=total.nonprod.mem/total.mem, freeCpuOnQueue=total.free.cpu/total.cpu, freeMemOnQueue=total.free.mem/total.mem)
+  
+  CalculateProdCpuOnQueueCI(allSBPendingInfoOn)
+  CalculateProdMemOnQueueCI(allSBPendingInfoOn)
+  
   
   resultDir <- "experiment-results-more-grains/dh-based-results"
   grainVarying <- "cpu"
@@ -518,7 +625,16 @@ ProcessPendingCPUData <- function() {
   allDHPendingDrawerMediumOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-medium", sep=""), resourceDemand)
   allDHPendingDrawerLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-large", sep=""), resourceDemand)
   allDHPendingDrawerXLargeOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-xlarge", sep=""), resourceDemand)
+
+  allDHPendingDrawerMiniPreOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-mini-pre", sep=""), resourceDemand)
+  allDHPendingDrawerMediumPreOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-medium-pre", sep=""), resourceDemand)
+  allDHPendingDrawerXLargePreOn <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-xlarge-pre", sep=""), resourceDemand)
   
+  allDHPendingDrawerMiniOff <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-mini-off", sep=""), resourceDemand)
+  allDHPendingDrawerMediumOff <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-medium-off", sep=""), resourceDemand)
+  allDHPendingDrawerXLargeOff <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = paste(grainVarying, "-xlarge-off", sep=""), resourceDemand)
+  
+    
   diffPendBladeMiniOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeMiniOn)
   diffPendBladeSmallOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeSmallOn)
   diffPendBladeMediumOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeMediumOn)
@@ -531,6 +647,37 @@ ProcessPendingCPUData <- function() {
   diffPendDrawerLargeOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerLargeOn)
   diffPendDrawerXLargeOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerXLargeOn)
 
+  diffPendDrawerMiniPreOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerMiniPreOn)
+  diffPendDrawerMediumPreOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerMediumPreOn)
+  diffPendDrawerXLargePreOn <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerXLargePreOn)
+  
+  diffPendDrawerMiniOff <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerMiniOff)
+  diffPendDrawerMediumOff <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerMediumOff)
+  diffPendDrawerXLargeOff <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerXLargeOff)
+  
+  
+    
+  getwd()
+  WriteDataInFile(diffPendBladeMiniOn, "diff-pending-blade-ram-micro.csv")
+  WriteDataInFile(diffPendBladeSmallOn, "diff-pending-blade-ram-small.csv")
+  WriteDataInFile(diffPendBladeMediumOn, "diff-pending-blade-ram-medium.csv")
+  WriteDataInFile(diffPendBladeLargeOn, "diff-pending-blade-ram-large.csv")
+  WriteDataInFile(diffPendBladeXLargeOn, "diff-pending-blade-ram-xlarge.csv")
+  
+  WriteDataInFile(diffPendDrawerMiniOn, "diff-pending-drawer-ram-micro.csv")
+  WriteDataInFile(diffPendDrawerSmallOn, "diff-pending-drawer-ram-small.csv")
+  WriteDataInFile(diffPendDrawerMediumOn, "diff-pending-drawer-ram-medium.csv")
+  WriteDataInFile(diffPendDrawerLargeOn, "diff-pending-drawer-ram-large.csv")
+  WriteDataInFile(diffPendDrawerXLargeOn, "diff-pending-drawer-ram-xlarge.csv")
+  
+  WriteDataInFile(diffPendDrawerMiniPreOn, "diff-pending-drawer-ram-micro-pre.csv")
+  WriteDataInFile(diffPendDrawerMediumPreOn, "diff-pending-drawer-ram-medium-pre.csv")
+  WriteDataInFile(diffPendDrawerXLargePreOn, "diff-pending-drawer-ram-xlarge-pre.csv")
+
+  WriteDataInFile(diffPendDrawerMiniOff, "diff-pending-drawer-ram-micro-off.csv")
+  WriteDataInFile(diffPendDrawerMediumOff, "diff-pending-drawer-ram-medium-off.csv")
+  WriteDataInFile(diffPendDrawerXLargeOff, "diff-pending-drawer-ram-xlarge-off.csv")
+  
   # pending queue fraction
   pendingFractionDiff <- data.frame()
   pendingFractionDiff<- rbind(pendingFractionDiff, data.frame(infra = "blade-on-small", CalculatePendingFractionCI(diffPendBladeSmallOn)))
@@ -551,6 +698,8 @@ ProcessPendingCPUData <- function() {
   pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculatePendingCpuCI(diffPendDrawerLargeOn)))
   pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculatePendingCpuCI(diffPendDrawerXLargeOn)))
 
+  PlotPendingCpuCI(pendingCpuCIDiff)
+  
   pendingCpuCIDiff <- data.frame()
   pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateCpuOnQueueCI(diffPendBladeMiniOn)))
   pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-small", sep=""), CalculateCpuOnQueueCI(diffPendBladeSmallOn)))
@@ -564,8 +713,87 @@ ProcessPendingCPUData <- function() {
   pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateCpuOnQueueCI(diffPendDrawerLargeOn)))
   pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateCpuOnQueueCI(diffPendDrawerXLargeOn)))
   
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateCpuOnQueueCI(diffPendDrawerMiniPreOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateCpuOnQueueCI(diffPendDrawerMediumPreOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateCpuOnQueueCI(diffPendDrawerXLargePreOn)))
   
-  PlotPendingCpuCI(pendingCpuCIDiff)
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateCpuOnQueueCI(diffPendDrawerMiniOff)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateCpuOnQueueCI(diffPendDrawerMediumOff)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateCpuOnQueueCI(diffPendDrawerXLargeOff)))
+
+  PlotCpuOnQueueCI(pendingCpuCIDiff)
+  
+  pendingCpuCIDiff <- data.frame()
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateProdCpuOnQueueCI(diffPendBladeMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-small", sep=""), CalculateProdCpuOnQueueCI(diffPendBladeSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-medium", sep=""), CalculateProdCpuOnQueueCI(diffPendBladeMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-large", sep=""), CalculateProdCpuOnQueueCI(diffPendBladeLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-xlarge", sep=""), CalculateProdCpuOnQueueCI(diffPendBladeXLargeOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-small", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerXLargeOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerMiniPreOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerMediumPreOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerXLargePreOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerMiniOff)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerMediumOff)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateProdCpuOnQueueCI(diffPendDrawerXLargeOff)))
+  PlotCpuOnQueueCI(pendingCpuCIDiff)
+  
+  pendingCpuCIDiff <- data.frame()
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateNonProdCpuOnQueueCI(diffPendBladeMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-small", sep=""), CalculateNonProdCpuOnQueueCI(diffPendBladeSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-medium", sep=""), CalculateNonProdCpuOnQueueCI(diffPendBladeMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-large", sep=""), CalculateNonProdCpuOnQueueCI(diffPendBladeLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-xlarge", sep=""), CalculateNonProdCpuOnQueueCI(diffPendBladeXLargeOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-small", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerXLargeOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerMiniPreOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerMediumPreOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerXLargePreOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerMiniOff)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerMediumOff)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateNonProdCpuOnQueueCI(diffPendDrawerXLargeOff)))
+  
+  PlotCpuOnQueueCI(pendingCpuCIDiff)
+  
+  
+  pendingCpuCIDiff <- data.frame()
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateFreeCpuOnQueueCI(diffPendBladeMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-small", sep=""), CalculateFreeCpuOnQueueCI(diffPendBladeSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-medium", sep=""), CalculateFreeCpuOnQueueCI(diffPendBladeMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-large", sep=""), CalculateFreeCpuOnQueueCI(diffPendBladeLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("blade-xlarge", sep=""), CalculateFreeCpuOnQueueCI(diffPendBladeXLargeOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerMiniOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-small", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerSmallOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerMediumOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerLargeOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerXLargeOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerMiniPreOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerMediumPreOn)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerXLargePreOn)))
+  
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerMiniOff)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerMediumOff)))
+  pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateFreeCpuOnQueueCI(diffPendDrawerXLargeOff)))
+  
+  PlotCpuOnQueueCI(pendingCpuCIDiff)
+  
+  
+  
   
   pendingMemCIDiff <- data.frame()
   pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculatePendingMemCI(diffPendBladeMiniOn)))
@@ -580,8 +808,100 @@ ProcessPendingCPUData <- function() {
   pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculatePendingMemCI(diffPendDrawerLargeOn)))
   pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculatePendingMemCI(diffPendDrawerXLargeOn)))
 
+  
   PlotPendingMemCI(pendingMemCIDiff)
   
+  pendingMemCIDiff <- data.frame()
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateMemOnQueueCI(diffPendBladeMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-small", sep=""), CalculateMemOnQueueCI(diffPendBladeSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-large", sep=""), CalculateMemOnQueueCI(diffPendBladeLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-xlarge", sep=""), CalculateMemOnQueueCI(diffPendBladeXLargeOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro", sep=""), CalculateMemOnQueueCI(diffPendDrawerMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-small", sep=""), CalculateMemOnQueueCI(diffPendDrawerSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium", sep=""), CalculateMemOnQueueCI(diffPendDrawerMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateMemOnQueueCI(diffPendDrawerLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateMemOnQueueCI(diffPendDrawerXLargeOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateMemOnQueueCI(diffPendDrawerMiniPreOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateMemOnQueueCI(diffPendDrawerMediumPreOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateMemOnQueueCI(diffPendDrawerXLargePreOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateMemOnQueueCI(diffPendDrawerMiniOff)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateMemOnQueueCI(diffPendDrawerMediumOff)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateMemOnQueueCI(diffPendDrawerXLargeOff)))
+  
+  PlotMemOnQueueCI(pendingMemCIDiff)
+  
+  pendingMemCIDiff <- data.frame()
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateProdMemOnQueueCI(diffPendBladeMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-small", sep=""), CalculateProdMemOnQueueCI(diffPendBladeSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-medium", sep=""), CalculateProdMemOnQueueCI(diffPendBladeMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-large", sep=""), CalculateProdMemOnQueueCI(diffPendBladeLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-xlarge", sep=""), CalculateProdMemOnQueueCI(diffPendBladeXLargeOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-small", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerXLargeOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerMiniPreOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerMediumPreOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerXLargePreOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerMiniOff)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerMediumOff)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateProdMemOnQueueCI(diffPendDrawerXLargeOff)))
+  
+  PlotMemOnQueueCI(pendingMemCIDiff)
+  
+  pendingMemCIDiff <- data.frame()
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateNonProdMemOnQueueCI(diffPendBladeMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-small", sep=""), CalculateNonProdMemOnQueueCI(diffPendBladeSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-medium", sep=""), CalculateNonProdMemOnQueueCI(diffPendBladeMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-large", sep=""), CalculateNonProdMemOnQueueCI(diffPendBladeLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-xlarge", sep=""), CalculateNonProdMemOnQueueCI(diffPendBladeXLargeOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-small", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerXLargeOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerMiniPreOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerMediumPreOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerXLargePreOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerMiniOff)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerMediumOff)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateNonProdMemOnQueueCI(diffPendDrawerXLargeOff)))
+  
+  PlotMemOnQueueCI(pendingMemCIDiff)
+  
+  pendingMemCIDiff <- data.frame()
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-micro", sep=""), CalculateFreeMemOnQueueCI(diffPendBladeMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-small", sep=""), CalculateFreeMemOnQueueCI(diffPendBladeSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-medium", sep=""), CalculateFreeMemOnQueueCI(diffPendBladeMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-large", sep=""), CalculateFreeMemOnQueueCI(diffPendBladeLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("blade-xlarge", sep=""), CalculateFreeMemOnQueueCI(diffPendBladeXLargeOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerMiniOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-small", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerSmallOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerMediumOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-large", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerLargeOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerXLargeOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro-pre", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerMiniPreOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium-pre", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerMediumPreOn)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge-pre", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerXLargePreOn)))
+  
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-micro-off", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerMiniOff)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-medium-off", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerMediumOff)))
+  pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(infra = paste("drawer-xlarge-off", sep=""), CalculateFreeMemOnQueueCI(diffPendDrawerXLargeOff)))
+  
+  PlotMemOnQueueCI(pendingMemCIDiff)
 }
 
 nAllTasks <- read.csv("number_of_tasks.txt")
