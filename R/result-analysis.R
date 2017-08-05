@@ -5,8 +5,8 @@ library("Rmisc")
 
 theme_set(theme_bw())
 
-setwd("/local/giovanni/git/borg-simulator/")
-setwd("C:/Users/giovanni/Documents/cloudish/git/borg-simulator/")
+# setwd("/local/giovanni/git/borg-simulator/")
+# setwd("C:/Users/giovanni/Documents/cloudish/git/borg-simulator/")
 
 total.cloud.cpu=6603.25
 total.cloud.mem=5862.75133
@@ -1001,6 +1001,25 @@ PlotCpuPendingBarGraph <- function(cpuCIinfo, memCIinfo) {
   print(p)
   dev.off()
   
+  ciInfoFixedCPU = ciInfo %>% filter(infra %in% c("medium, small", "medium, medium", "medium, large")) %>% mutate(group = "RAM grain")
+  ciInfoFixedMEM = ciInfo %>% filter(infra %in% c("small, medium", "medium, medium", "large, medium")) %>% mutate(group = "CPU grain")
+  dplot = rbind(ciInfoFixedCPU, ciInfoFixedMEM)
+
+  p = ggplot(dplot, aes(x=group, y=mean / 100, fill=infra)) + 
+    geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
+    geom_errorbar(aes(ymin=lower / 100, ymax=upper / 100),  width=.2, position=position_dodge(.8), size = 0.7) + 
+    facet_grid(metric ~ type, scales = "fixed") + 
+    xlab("Resource type with grain variation") + 
+    ylab(NULL) +
+    scale_fill_brewer("Grain size (CPU, RAM):", palette = "Set3") + 
+    scale_y_continuous(labels = percent) + 
+    theme_bw(base_size = 16) + theme(legend.position = "top") + 
+    guides(fill = guide_legend(nrow = 2, byrow = TRUE))
+  p
+  png(filename = "resource_grain_ic.png", width = 550, height = 350)
+  print(p)
+  dev.off()
+  
   
   #cpuCIinfo <- cpuCIinfo %>% select(model, infra, upper, mean, lower)
   
@@ -1028,7 +1047,7 @@ ciInfo$infra = factor(ciInfo$infra, c("micro, medium",  "medium, medium", "xlarg
 p = ggplot(ciInfo2, aes(x=type, y=mean / 100, fill=model)) + 
   geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
   geom_errorbar(aes(ymin=lower / 100, ymax=upper / 100),  width=.2, position=position_dodge(0.8), size = 0.7) + 
-  facet_grid(metric ~ ., scales = "free") + 
+  facet_grid(metric ~ ., scales = "fixed") + 
   xlab(NULL) + 
   ylab(NULL) +
   scale_fill_brewer("Maximum\ncapacity:\n", palette = "Set3") + 
@@ -1659,7 +1678,7 @@ allSBPendingInfoOff <- CollectAllTimesSBPendingInfo("experiment-results/sb-based
 
 
 allSBProdAllocations <- CollectAllTimesSBAllocationInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = F)
-allSBProdPendingInfo <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = F, nProdAllTasks)
+allSBProdPendingInfo <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = T, allTasks = F, nProdTasks)
 
 allSBProdAllocationsOff <- CollectAllTimesSBAllocationInfo("experiment-results/sb-based-results", constraintOn = F, allTasks = F)
 allSBProdPendingInfoOff <- CollectAllTimesSBPendingInfo("experiment-results/sb-based-results", constraintOn = F, allTasks = F, nProdTasks)
