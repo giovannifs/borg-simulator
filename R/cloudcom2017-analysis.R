@@ -234,12 +234,12 @@ allDHAllocBladeCPUXLargeOnRam <- CollectAllTimesDHAllocationInfo(resultDir, allT
 
 # cpu fragmentation
 cpuFragmentationsDiff <- data.frame()
-cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(model = "blade-on", infra = paste("small, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMiniOn)))
-cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMediumOn)))
-cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(model = "blade-on", infra = paste("large, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUXLargeOn)))
-cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(model = "blade-on", infra = paste("medium, small", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMiniOnRam)))
-cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMediumOnRam)))
-cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(model = "blade-on", infra = paste("medium, large", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUXLargeOnRam)))
+cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("small, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMiniOn)))
+cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMediumOn)))
+cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("large, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUXLargeOn)))
+cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, small", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMiniOnRam)))
+cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMediumOnRam)))
+cpuFragmentationsDiff <- rbind(cpuFragmentationsDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, large", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUXLargeOnRam)))
 
 wilcox.test(allDHAllocBladeCPUMiniOn$cpu.fragmentation, allDHAllocBladeCPUMediumOn$cpu.fragmentation, alternative = "less", paired = T)
 wilcox.test(allDHAllocBladeCPUMediumOn$cpu.fragmentation, allDHAllocBladeCPUXLargeOn$cpu.fragmentation, alternative = "less", paired = T)
@@ -248,12 +248,12 @@ wilcox.test(pendingCpuCIDiff$cpu.fragmentation, allDHAllocBladeCPUMediumOn$cpu.f
 
 # mem fragmentation
 memFragmentationsDiff <- data.frame()
-memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(model = "blade-on", infra = paste("small, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMiniOn)))
-memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMediumOn)))
-memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(model = "blade-on", infra = paste("large, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUXLargeOn)))
-memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(model = "blade-on", infra = paste("medium, small", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMiniOnRam)))
-memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMediumOnRam)))
-memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(model = "blade-on", infra = paste("medium, large", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUXLargeOnRam)))
+memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("small, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMiniOn)))
+memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMediumOn)))
+memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("large, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUXLargeOn)))
+memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, small", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMiniOnRam)))
+memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMediumOnRam)))
+memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, large", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUXLargeOnRam)))
 
 
 diffBladeCPUMiniOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMiniOn)
@@ -266,21 +266,21 @@ diffBladeCPUXLargeOnRam <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsO
 
 
 cpuInfraDiff <- data.frame()
-cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(model = "blade-on", infra = paste("small, medium", sep=""), CalculateInfraCPUCI(diffBladeCPUMiniOn)))
-cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateInfraCPUCI(diffBladeCPUMediumOn)))
-cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(model = "blade-on", infra = paste("large, medium", sep=""), CalculateInfraCPUCI(diffBladeCPUXLargeOn)))
-cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(model = "blade-on", infra = paste("medium, small", sep=""), CalculateInfraCPUCI(diffBladeCPUMiniOnRam)))
-cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateInfraCPUCI(diffBladeCPUMediumOnRam)))
-cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(model = "blade-on", infra = paste("medium, large", sep=""), CalculateInfraCPUCI(diffBladeCPUXLargeOnRam)))
+cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("small, medium", sep=""), CalculateInfraCPUCI(diffBladeCPUMiniOn)))
+cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateInfraCPUCI(diffBladeCPUMediumOn)))
+cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("large, medium", sep=""), CalculateInfraCPUCI(diffBladeCPUXLargeOn)))
+cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, small", sep=""), CalculateInfraCPUCI(diffBladeCPUMiniOnRam)))
+cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateInfraCPUCI(diffBladeCPUMediumOnRam)))
+cpuInfraDiff <- rbind(cpuInfraDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, large", sep=""), CalculateInfraCPUCI(diffBladeCPUXLargeOnRam)))
 
 
 memInfraDiff <- data.frame()
-memInfraDiff <- rbind(memInfraDiff, data.frame(model = "blade-on", infra = paste("small, medium", sep=""), CalculateInfraMemCI(diffBladeCPUMiniOn)))
-memInfraDiff <- rbind(memInfraDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateInfraMemCI(diffBladeCPUMediumOn)))
-memInfraDiff <- rbind(memInfraDiff, data.frame(model = "blade-on", infra = paste("large, medium", sep=""), CalculateInfraMemCI(diffBladeCPUXLargeOn)))
-memInfraDiff <- rbind(memInfraDiff, data.frame(model = "blade-on", infra = paste("medium, small", sep=""), CalculateInfraMemCI(diffBladeCPUMiniOnRam)))
-memInfraDiff <- rbind(memInfraDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateInfraMemCI(diffBladeCPUMediumOnRam)))
-memInfraDiff <- rbind(memInfraDiff, data.frame(model = "blade-on", infra = paste("medium, large", sep=""), CalculateInfraMemCI(diffBladeCPUXLargeOnRam)))
+memInfraDiff <- rbind(memInfraDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("small, medium", sep=""), CalculateInfraMemCI(diffBladeCPUMiniOn)))
+memInfraDiff <- rbind(memInfraDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateInfraMemCI(diffBladeCPUMediumOn)))
+memInfraDiff <- rbind(memInfraDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("large, medium", sep=""), CalculateInfraMemCI(diffBladeCPUXLargeOn)))
+memInfraDiff <- rbind(memInfraDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, small", sep=""), CalculateInfraMemCI(diffBladeCPUMiniOnRam)))
+memInfraDiff <- rbind(memInfraDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateInfraMemCI(diffBladeCPUMediumOnRam)))
+memInfraDiff <- rbind(memInfraDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, large", sep=""), CalculateInfraMemCI(diffBladeCPUXLargeOnRam)))
 
 GenerateWorkloadInfo <- function() {
   workloadInfo <- data.frame()
@@ -339,22 +339,22 @@ diffPendBladeMediumOnRam <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn,
 diffPendBladeXLargeOnRam <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingBladeXLargeOnRam)
 
 pendingCpuCIDiff <- data.frame()
-pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(model = "blade-on", infra = paste("small, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeMiniOn)))
-pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeMediumOn)))
-pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(model = "blade-on", infra = paste("large, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeXLargeOn)))
+pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("small, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeMiniOn)))
+pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeMediumOn)))
+pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("large, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeXLargeOn)))
 
-pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(model = "blade-on", infra = paste("medium, small", sep=""), CalculateCpuOnQueueCI(diffPendBladeMiniOnRam)))
-pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeMediumOnRam)))
-pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(model = "blade-on", infra = paste("medium, large", sep=""), CalculateCpuOnQueueCI(diffPendBladeXLargeOnRam)))
+pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, small", sep=""), CalculateCpuOnQueueCI(diffPendBladeMiniOnRam)))
+pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeMediumOnRam)))
+pendingCpuCIDiff<- rbind(pendingCpuCIDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, large", sep=""), CalculateCpuOnQueueCI(diffPendBladeXLargeOnRam)))
 
 pendingMemCIDiff <- data.frame()
-pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(model = "blade-on", infra = paste("small, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMiniOn)))
-pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMediumOn)))
-pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(model = "blade-on", infra = paste("large, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeXLargeOn)))
+pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("small, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMiniOn)))
+pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMediumOn)))
+pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(grain = "cpu", model = "blade-on", infra = paste("large, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeXLargeOn)))
 
-pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(model = "blade-on", infra = paste("medium, small", sep=""), CalculateMemOnQueueCI(diffPendBladeMiniOnRam)))
-pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMediumOnRam)))
-pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(model = "blade-on", infra = paste("medium, large", sep=""), CalculateMemOnQueueCI(diffPendBladeXLargeOnRam)))
+pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, small", sep=""), CalculateMemOnQueueCI(diffPendBladeMiniOnRam)))
+pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMediumOnRam)))
+pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, large", sep=""), CalculateMemOnQueueCI(diffPendBladeXLargeOnRam)))
 
 
 wilcox.test(diffPendBladeMiniOn$cpuOnQueue, diffPendBladeMediumOn$cpuOnQueue, alternative = "less", paired = T)
@@ -372,20 +372,22 @@ memPending <- pendingMemCIDiff%>% mutate(type = "Pending", metric = "RAM")
 cpuInfraCIinfo <- cpuInfraDiff %>% mutate(type = "Unused", metric = "CPU")
 memInfraCIinfo <- memInfraDiff %>% mutate(type = "Unused", metric = "RAM")
 
+memInfraCIinfo %>% summarise(mean(mean))
+
 ciInfo <- rbind(cpuInfraCIinfo, memInfraCIinfo, cpuPending, memPending, cpuFragmentation, memFragmentation)
 
 library(scales)
 library(reshape2)
 
 ciInfo$type = factor(ciInfo$type, c("Pending", "Unused", "Idleness" ))
-ciInfo$infra = factor(ciInfo$infra, c("small, medium", "medium, small", "medium, medium", "large, medium",  "medium, large"))
-p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra)) + 
+ciInfo$infra = factor(ciInfo$infra, c("small, medium", "medium, medium", "large, medium",  "medium, small", "medium, large"))
+p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra, group = interaction(infra, grain))) + 
   geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
   geom_errorbar(aes(ymin=lower / 100, ymax=upper / 100),  width=.2, position=position_dodge(.8), size = 0.7) + 
   facet_grid(metric ~ ., scales = "free") + 
   xlab(NULL) + 
   ylab(NULL) +
-  scale_fill_brewer("Grain size (CPU, RAM):", palette = "Set3") + 
+  scale_fill_brewer("Size of grain (CPU, RAM):", palette = "Set3") + 
   scale_x_discrete() +
   scale_y_continuous(labels = percent, limits = c(-0.0005, 0.17)) + 
   theme_bw(base_size = 16) + theme(legend.position = "top") + 
@@ -408,20 +410,20 @@ allDHAllocBladeCPUMediumOff <- CollectAllTimesDHAllocationInfo(resultDir, allTas
 allDHAllocDrawerCPUMediumOff <- CollectAllTimesDHAllocationInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 16, dhModel = "drawer", resourceLabel = "cpu-medium-off")
 
 cpuFragmentationsDiff2 <- data.frame()
-cpuFragmentationsDiff2 <- rbind(cpuFragmentationsDiff2, data.frame(model = "blade", infra = paste("medium, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMediumOff)))
-cpuFragmentationsDiff2 <- rbind(cpuFragmentationsDiff2, data.frame(model = "drawer", infra = paste("medium, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocDrawerCPUMediumOff)))
+cpuFragmentationsDiff2 <- rbind(cpuFragmentationsDiff2, data.frame(model = "blade-limited", infra = paste("medium, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocBladeCPUMediumOff)))
+cpuFragmentationsDiff2 <- rbind(cpuFragmentationsDiff2, data.frame(model = "drawer-limited", infra = paste("medium, medium", sep=""), CalculateCpuFragmentationCI(allDHAllocDrawerCPUMediumOff)))
 
 memFragmentationsDiff2 <- data.frame()
-memFragmentationsDiff2 <- rbind(memFragmentationsDiff2, data.frame(model = "blade", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMediumOff)))
-memFragmentationsDiff2 <- rbind(memFragmentationsDiff2, data.frame(model = "drawer", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocDrawerCPUMediumOff)))
+memFragmentationsDiff2 <- rbind(memFragmentationsDiff2, data.frame(model = "blade-limited", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMediumOff)))
+memFragmentationsDiff2 <- rbind(memFragmentationsDiff2, data.frame(model = "drawer-limited", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocDrawerCPUMediumOff)))
 
 cpuInfraDiff2 <- data.frame()
-cpuInfraDiff2 <- rbind(cpuInfraDiff2, data.frame(model = "blade", infra = paste("medium, medium", sep=""), CalculateInfraCPUCI(CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMediumOff))))
-cpuInfraDiff2 <- rbind(cpuInfraDiff2, data.frame(model = "drawer", infra = paste("medium, medium", sep=""), CalculateInfraCPUCI(CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUMediumOff))))
+cpuInfraDiff2 <- rbind(cpuInfraDiff2, data.frame(model = "blade-limited", infra = paste("medium, medium", sep=""), CalculateInfraCPUCI(CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMediumOff))))
+cpuInfraDiff2 <- rbind(cpuInfraDiff2, data.frame(model = "drawer-limited", infra = paste("medium, medium", sep=""), CalculateInfraCPUCI(CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUMediumOff))))
 
 memInfraDiff2 <- data.frame()
-memInfraDiff2 <- rbind(memInfraDiff2, data.frame(model = "blade", infra = paste("medium, medium", sep=""), CalculateInfraMemCI(CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMediumOff))))
-memInfraDiff2 <- rbind(memInfraDiff2, data.frame(model = "drawer", infra = paste("medium, medium", sep=""), CalculateInfraMemCI(CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUMediumOff))))
+memInfraDiff2 <- rbind(memInfraDiff2, data.frame(model = "blade-limited", infra = paste("medium, medium", sep=""), CalculateInfraMemCI(CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMediumOff))))
+memInfraDiff2 <- rbind(memInfraDiff2, data.frame(model = "drawer-limited", infra = paste("medium, medium", sep=""), CalculateInfraMemCI(CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocDrawerCPUMediumOff))))
 
 allDHPendingBladeMediumOff <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "cpu-medium-off", resourceDemand)
 allDHPendingDrawerMediumOff <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = F, serverSize = 16, dhModel = "drawer", nAllTasks, resourceLabel = "cpu-medium-off", resourceDemand)
@@ -430,12 +432,12 @@ diffPendBladeMediumOff <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, a
 diffPendDrawerMediumOff <- CollectPendingDiffBetweenSBAndDH(allSBPendingInfoOn, allDHPendingDrawerMediumOff)
 
 pendingCpuCIDiff2 <- data.frame()
-pendingCpuCIDiff2<- rbind(pendingCpuCIDiff2, data.frame(model = "blade", infra = paste("medium, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeMediumOff)))
-pendingCpuCIDiff2<- rbind(pendingCpuCIDiff2, data.frame(model = "drawer", infra = paste("medium, medium", sep=""), CalculateCpuOnQueueCI(diffPendDrawerMediumOff)))
+pendingCpuCIDiff2<- rbind(pendingCpuCIDiff2, data.frame(model = "blade-limited", infra = paste("medium, medium", sep=""), CalculateCpuOnQueueCI(diffPendBladeMediumOff)))
+pendingCpuCIDiff2<- rbind(pendingCpuCIDiff2, data.frame(model = "drawer-limited", infra = paste("medium, medium", sep=""), CalculateCpuOnQueueCI(diffPendDrawerMediumOff)))
 
 pendingMemCIDiff2 <- data.frame()
-pendingMemCIDiff2<- rbind(pendingMemCIDiff2, data.frame(model = "blade", infra = paste("medium, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMediumOff)))
-pendingMemCIDiff2<- rbind(pendingMemCIDiff2, data.frame(model = "drawer", infra = paste("medium, medium", sep=""), CalculateMemOnQueueCI(diffPendDrawerMediumOff)))
+pendingMemCIDiff2<- rbind(pendingMemCIDiff2, data.frame(model = "blade-limited", infra = paste("medium, medium", sep=""), CalculateMemOnQueueCI(diffPendBladeMediumOff)))
+pendingMemCIDiff2<- rbind(pendingMemCIDiff2, data.frame(model = "drawer-limited", infra = paste("medium, medium", sep=""), CalculateMemOnQueueCI(diffPendDrawerMediumOff)))
 
 cpuFragmentationsDiff2 <- cpuFragmentationsDiff2 %>% mutate(upper=upper * 100, mean= mean * 100, lower=lower * 100)
 memFragmentationsDiff2 <- memFragmentationsDiff2 %>% mutate(upper=upper * 100, mean= mean * 100, lower=lower * 100)
@@ -449,6 +451,15 @@ memPending2 <- pendingMemCIDiff2%>% mutate(type = "Pending", metric = "RAM")
 cpuInfraCIinfo2 <- cpuInfraDiff2 %>% mutate(type = "Unused", metric = "CPU")
 memInfraCIinfo2 <- memInfraDiff2 %>% mutate(type = "Unused", metric = "RAM")
 
+#cpuFragmentation2 <- cpuFragmentation2 %>% mutate(model=ifelse(model=="blade", "blade-limited", "drawer-limited"))
+#cpuInfraCIinfo2 <- cpuInfraCIinfo2 %>% mutate(model=ifelse(model=="blade", "blade-limited", "drawer-limited"))
+#cpuPending2 <- cpuPending2 %>% mutate(model=ifelse(model=="blade", "blade-limited", "drawer-limited"))
+
+#memFragmentation2 <- memFragmentation2 %>% mutate(model=ifelse(model=="blade", "blade-limited", "drawer-limited"))
+#memInfraCIinfo2 <- memInfraCIinfo2 %>% mutate(model=ifelse(model=="blade", "blade-limited", "drawer-limited"))
+#memPending2 <- memPending2 %>% mutate(model=ifelse(model=="blade", "blade-limited", "drawer-limited"))
+
+
 ciInfo2 <- rbind(cpuInfraCIinfo2, memInfraCIinfo2, cpuPending2, memPending2, cpuFragmentation2, memFragmentation2)
 
 ciInfo2$type = factor(ciInfo2$type, c("Pending", "Unused", "Idleness" ))
@@ -458,7 +469,7 @@ p = ggplot(ciInfo2, aes(x=type, y=mean / 100, fill=model)) +
   facet_grid(metric ~ ., scales = "free") + 
   xlab(NULL) + 
   ylab(NULL) +
-  scale_fill_brewer("Maximum\ncapacity:\n", palette = "Set3") + 
+  scale_fill_brewer("Maximum size:\n", palette = "Set3") + 
   scale_y_continuous(labels = percent, limits = c(-0.005, 0.17)) + theme_bw(base_size = 16)
 
 p
