@@ -379,15 +379,24 @@ ciInfo <- rbind(cpuInfraCIinfo, memInfraCIinfo, cpuPending, memPending, cpuFragm
 library(scales)
 library(reshape2)
 
-ciInfo$type = factor(ciInfo$type, c("Pending", "Unused", "Idleness" ))
-ciInfo$infra = factor(ciInfo$infra, c("small, medium", "medium, medium", "large, medium",  "medium, small", "medium, large"))
-p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra, group = interaction(infra, grain))) + 
+ciInfo <- read.table("resource_grain_ic_fabio.dat", header = T)
+ciInfo$type <- factor(ciInfo$type, c("Pending", "Unused", "Idleness" ))
+ciInfo = ciInfo %>% mutate(aux = paste(grain, infra))
+ciInfo$infra = factor(ciInfo$aux, c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "ram medium, small", "ram medium, medium", "ram medium, large"))
+
+colors <- c("#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#ffffb3", "#80b1d3")
+labels <- c("small, medium", "medium, medium", "large, medium", "medium, small", "medium, medium", "medium, large")
+
+p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra)) + #, group = interaction(infra, grain))) + 
   geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
   geom_errorbar(aes(ymin=lower / 100, ymax=upper / 100),  width=.2, position=position_dodge(.8), size = 0.7) + 
   facet_grid(metric ~ ., scales = "free") + 
   xlab(NULL) + 
   ylab(NULL) +
-  scale_fill_brewer("Size of grain (CPU, RAM):", palette = "Set3") + 
+  scale_fill_manual("Size of grain (CPU, RAM):", 
+                    breaks=c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "ram medium, small", "ram medium, medium", "ram medium, large"),
+                    values = colors,
+                    labels = labels) + 
   scale_x_discrete() +
   scale_y_continuous(labels = percent, limits = c(-0.0005, 0.17)) + 
   theme_bw(base_size = 16) + theme(legend.position = "top") + 
@@ -396,9 +405,6 @@ p
 png(filename = "resource_grain_ic.png", width = 550, height = 350)
 print(p)
 dev.off()
-
-
-
 
 
 allSBAllocationsOn <- CollectAllTimesSBAllocationInfo("experiment-results-more-grains/sb-based-results", constraintOn = T, allTasks = T)
@@ -461,6 +467,8 @@ memInfraCIinfo2 <- memInfraDiff2 %>% mutate(type = "Unused", metric = "RAM")
 
 
 ciInfo2 <- rbind(cpuInfraCIinfo2, memInfraCIinfo2, cpuPending2, memPending2, cpuFragmentation2, memFragmentation2)
+
+ciInfo2 <- read.table(file = "blade_vs_drawer_ic_fabio.dat", header = T)
 
 ciInfo2$type = factor(ciInfo2$type, c("Pending", "Unused", "Idleness" ))
 p = ggplot(ciInfo2, aes(x=type, y=mean / 100, fill=model)) + 
