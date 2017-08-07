@@ -255,6 +255,11 @@ memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "ram", 
 memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, medium", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUMediumOnRam)))
 memFragmentationsDiff <- rbind(memFragmentationsDiff, data.frame(grain = "ram", model = "blade-on", infra = paste("medium, large", sep=""), CalculateMemFragmentationCI(allDHAllocBladeCPUXLargeOnRam)))
 
+wilcox.test(allDHAllocBladeCPUMiniOn$mem.fragmentation, allDHAllocBladeCPUMediumOn$mem.fragmentation, alternative = "less", paired = T)
+wilcox.test(allDHAllocBladeCPUMediumOn$mem.fragmentation, allDHAllocBladeCPUXLargeOn$mem.fragmentation, alternative = "less", paired = T)
+wilcox.test(allDHAllocBladeCPUMiniOnRam$mem.fragmentation, allDHAllocBladeCPUMediumOnRam$mem.fragmentation, alternative = "less", paired = T)
+wilcox.test(allDHAllocBladeCPUMediumOnRam$mem.fragmentation, allDHAllocBladeCPUMediumOnRam$mem.fragmentation, alternative = "less", paired = T)
+
 
 diffBladeCPUMiniOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMiniOn)
 diffBladeCPUMediumOn <- CollectAllocationDiffBetweenSBAndDH(allSBAllocationsOn, allDHAllocBladeCPUMediumOn)
@@ -314,6 +319,7 @@ allDHPendingBladeMiniOnRam <- CollectAllTimesDHPendingInfo(resultDir, allTasks =
 allDHPendingBladeMediumOnRam <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "ram-medium", resourceDemand)
 allDHPendingBladeXLargeOnRam <- CollectAllTimesDHPendingInfo(resultDir, allTasks = T, constraintOn = T, serverSize = 1, dhModel = "blade", nAllTasks, resourceLabel = "ram-xlarge", resourceDemand)
 
+
 CollectPendingDiffBetweenSBAndDH <- function(sbPending, dhPending){
   diff <- sbPending - dhPending
   return(diff)
@@ -359,18 +365,21 @@ pendingMemCIDiff<- rbind(pendingMemCIDiff, data.frame(grain = "ram", model = "bl
 
 wilcox.test(diffPendBladeMiniOn$cpuOnQueue, diffPendBladeMediumOn$cpuOnQueue, alternative = "less", paired = T)
 wilcox.test(diffPendBladeMediumOn$cpuOnQueue, diffPendBladeXLargeOn$cpuOnQueue, alternative = "less", paired = T)
+wilcox.test(diffPendBladeMiniOnRam$cpuOnQueue, diffPendBladeMediumOnRam$cpuOnQueue, alternative = "less", paired = T)
+wilcox.test(diffPendBladeMediumOnRam$cpuOnQueue, diffPendBladeXLargeOnRam$cpuOnQueue, alternative = "less", paired = T)
+
 
 cpuFragmentationsDiff <- cpuFragmentationsDiff %>% mutate(upper=upper * 100, mean= mean * 100, lower=lower * 100)
 memFragmentationsDiff <- memFragmentationsDiff %>% mutate(upper=upper * 100, mean= mean * 100, lower=lower * 100)
 
-cpuFragmentation <- cpuFragmentationsDiff %>% mutate(type = "Idleness", metric = "CPU")
-memFragmentation <- memFragmentationsDiff %>% mutate(type = "Idleness", metric = "RAM")
+cpuFragmentation <- cpuFragmentationsDiff %>% mutate(type = "Aggregate\nidleness", metric = "CPU")
+memFragmentation <- memFragmentationsDiff %>% mutate(type = "Aggregate\nidleness", metric = "RAM")
 
-cpuPending <- pendingCpuCIDiff%>% mutate(type = "Pending", metric = "CPU")
-memPending <- pendingMemCIDiff%>% mutate(type = "Pending", metric = "RAM")
+cpuPending <- pendingCpuCIDiff%>% mutate(type = "Difference left\npending", metric = "CPU")
+memPending <- pendingMemCIDiff%>% mutate(type = "Difference left\npending", metric = "RAM")
 
-cpuInfraCIinfo <- cpuInfraDiff %>% mutate(type = "Unused", metric = "CPU")
-memInfraCIinfo <- memInfraDiff %>% mutate(type = "Unused", metric = "RAM")
+cpuInfraCIinfo <- cpuInfraDiff %>% mutate(type = "Unused\nresources", metric = "CPU")
+memInfraCIinfo <- memInfraDiff %>% mutate(type = "Unused\nresources", metric = "RAM")
 
 memInfraCIinfo %>% summarise(mean(mean))
 
@@ -380,12 +389,19 @@ library(scales)
 library(reshape2)
 
 ciInfo <- read.table("resource_grain_ic_fabio.dat", header = T)
-ciInfo$type <- factor(ciInfo$type, c("Pending", "Unused", "Idleness" ))
+ciInfo$type <- factor(ciInfo$type, c("Difference left\npending", "Unused\nresources", "Aggregate\nidleness" ))
 ciInfo = ciInfo %>% mutate(aux = paste(grain, infra))
 ciInfo$infra = factor(ciInfo$aux, c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "ram medium, small", "ram medium, medium", "ram medium, large"))
 
 colors <- c("#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#ffffb3", "#80b1d3")
 labels <- c("small, medium", "medium, medium", "large, medium", "medium, small", "medium, medium", "medium, large")
+
+WriteDataInFile <- function(data, fileName) {
+  write.table(data, file = fileName, row.names = FALSE, col.names = TRUE, quote = TRUE)
+}
+
+WriteDataInFile(ciInfo, "resource_grain_ic.csv")
+WriteDataInFile(ciInfo2, "blade_vs_drawer_ic.csv")
 
 p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra)) + #, group = interaction(infra, grain))) + 
   geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
@@ -448,14 +464,14 @@ pendingMemCIDiff2<- rbind(pendingMemCIDiff2, data.frame(model = "drawer-limited"
 cpuFragmentationsDiff2 <- cpuFragmentationsDiff2 %>% mutate(upper=upper * 100, mean= mean * 100, lower=lower * 100)
 memFragmentationsDiff2 <- memFragmentationsDiff2 %>% mutate(upper=upper * 100, mean= mean * 100, lower=lower * 100)
 
-cpuFragmentation2 <- cpuFragmentationsDiff2 %>% mutate(type = "Idleness", metric = "CPU")
-memFragmentation2 <- memFragmentationsDiff2 %>% mutate(type = "Idleness", metric = "RAM")
+cpuFragmentation2 <- cpuFragmentationsDiff2 %>% mutate(type = "Aggregate\nidleness", metric = "CPU")
+memFragmentation2 <- memFragmentationsDiff2 %>% mutate(type = "Aggregate\nidleness", metric = "RAM")
 
-cpuPending2 <- pendingCpuCIDiff2%>% mutate(type = "Pending", metric = "CPU")
-memPending2 <- pendingMemCIDiff2%>% mutate(type = "Pending", metric = "RAM")
+cpuPending2 <- pendingCpuCIDiff2%>% mutate(type = "Difference left\npending", metric = "CPU")
+memPending2 <- pendingMemCIDiff2%>% mutate(type = "Difference left\npending", metric = "RAM")
 
-cpuInfraCIinfo2 <- cpuInfraDiff2 %>% mutate(type = "Unused", metric = "CPU")
-memInfraCIinfo2 <- memInfraDiff2 %>% mutate(type = "Unused", metric = "RAM")
+cpuInfraCIinfo2 <- cpuInfraDiff2 %>% mutate(type = "Unused\nresources", metric = "CPU")
+memInfraCIinfo2 <- memInfraDiff2 %>% mutate(type = "Unused\nresources", metric = "RAM")
 
 #cpuFragmentation2 <- cpuFragmentation2 %>% mutate(model=ifelse(model=="blade", "blade-limited", "drawer-limited"))
 #cpuInfraCIinfo2 <- cpuInfraCIinfo2 %>% mutate(model=ifelse(model=="blade", "blade-limited", "drawer-limited"))
@@ -470,7 +486,7 @@ ciInfo2 <- rbind(cpuInfraCIinfo2, memInfraCIinfo2, cpuPending2, memPending2, cpu
 
 ciInfo2 <- read.table(file = "blade_vs_drawer_ic_fabio.dat", header = T)
 
-ciInfo2$type = factor(ciInfo2$type, c("Pending", "Unused", "Idleness" ))
+ciInfo2$type = factor(ciInfo2$type, c("Difference left\npending", "Unused\nresources", "Aggregate\nidleness" ))
 p = ggplot(ciInfo2, aes(x=type, y=mean / 100, fill=model)) + 
   geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
   geom_errorbar(aes(ymin=lower / 100, ymax=upper / 100),  width=.2, position=position_dodge(0.8), size = 0.7) + 
