@@ -379,21 +379,20 @@ ciInfo <- rbind(cpuInfraCIinfo, memInfraCIinfo, cpuPending, memPending, cpuFragm
 library(scales)
 library(reshape2)
 
-ciInfo <- read.table("resource_grain_ic_fabio.dat", header = T)
-ciInfo$type <- factor(ciInfo$type, c("Pending", "Unused", "Idleness" ))
-ciInfo = ciInfo %>% mutate(aux = paste(grain, infra)) %>% select(-grain)
+ciInfo <- read.table("resource_grain_ic.csv", header = T)
+ciInfo$type <- factor(ciInfo$type, c("Difference left\npending", "Unused\nresources", "Aggregate\nidleness" ))
+# ciInfo$type <- factor(ciInfo$type, c("Pending", "Unused", "Idleness" ))
+ciInfo = ciInfo %>% select(-grain)
 
-head(ciInfo)
-
-df_aux = data.frame(metric = toupper(c("cpu", "cpu", "cpu", "ram", "ram", "ram")), type = rep(c("Pending", "Unused", "Idleness" ), 2), 
-                    infra = "space", mean = NA, lower = NA, upper = NA,
-                    model = "blade-on", aux = "space") %>% select(model, infra, upper, mean, lower, type, metric, aux)
+df_aux = data.frame(metric = toupper(c("cpu", "cpu", "cpu", "ram", "ram", "ram")), type = rep(c("Difference left\npending", "Unused\nresources", "Aggregate\nidleness" ), 2), 
+                    infra = "", mean = NA, lower = NA, upper = NA,
+                    model = "blade-on", aux = "") %>% select(model, infra, upper, mean, lower, type, metric, aux)
 
 ciInfo = rbind(ciInfo, df_aux)
 
-ciInfo$infra = factor(ciInfo$aux, c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "space", "ram medium, small", "ram medium, medium", "ram medium, large"))
+ciInfo$infra = factor(ciInfo$aux, c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "", "ram medium, small", "ram medium, medium", "ram medium, large"))
 colors <- c("#8dd3c7", "#ffffb3", "#bebada", "#FFFFFF", "#fb8072", "#ffffb3", "#80b1d3")
-labels <- c("small, medium", "medium, medium", "large, medium", "space", "medium, small", "medium, medium", "medium, large")
+labels <- c("small, medium", "medium, medium", "large, medium", "", "medium, small", "medium, medium", "medium, large")
 
 p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra)) + #, group = interaction(infra, grain))) + 
   geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
@@ -402,18 +401,17 @@ p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra)) + #, group = interacti
   xlab(NULL) + 
   ylab(NULL) +
   scale_fill_manual("Size of grain (CPU, RAM):", 
-                    breaks=c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "space", "ram medium, small", "ram medium, medium", "ram medium, large"),
+                    breaks=c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "", "ram medium, small", "ram medium, medium", "ram medium, large"),
                     values = colors,
                     labels = labels) + 
   scale_x_discrete() +
   scale_y_continuous(labels = percent, limits = c(-0.0005, 0.17)) + 
-  theme_bw(base_size = 16) + theme(legend.position = "top") + 
-  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
+  theme_bw(base_size = 16) + guides(fill = guide_legend(nrow = 2, byrow = TRUE)) + 
+  theme(legend.position = "top")
 p
 png(filename = "resource_grain_ic.png", width = 550, height = 350)
 print(p)
 dev.off()
-
 
 allSBAllocationsOn <- CollectAllTimesSBAllocationInfo("experiment-results-more-grains/sb-based-results", constraintOn = T, allTasks = T)
 
@@ -476,17 +474,17 @@ memInfraCIinfo2 <- memInfraDiff2 %>% mutate(type = "Unused", metric = "RAM")
 
 ciInfo2 <- rbind(cpuInfraCIinfo2, memInfraCIinfo2, cpuPending2, memPending2, cpuFragmentation2, memFragmentation2)
 
-ciInfo2 <- read.table(file = "blade_vs_drawer_ic_fabio.dat", header = T)
+ciInfo2 <- read.table(file = "blade_vs_drawer_ic.csv", header = T)
 
-ciInfo2$type = factor(ciInfo2$type, c("Pending", "Unused", "Idleness" ))
-p = ggplot(ciInfo2, aes(x=type, y=mean / 100, fill=model)) + 
-  geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
-  geom_errorbar(aes(ymin=lower / 100, ymax=upper / 100),  width=.2, position=position_dodge(0.8), size = 0.7) + 
-  facet_grid(metric ~ ., scales = "free") + 
-  xlab(NULL) + 
-  ylab(NULL) +
-  scale_fill_brewer("Maximum size:\n", palette = "Set3") + 
-  scale_y_continuous(labels = percent, limits = c(-0.005, 0.17)) + theme_bw(base_size = 16)
+ciInfo2$type = factor(ciInfo2$type, c("Difference left\npending", "Unused\nresources", "Aggregate\nidleness" ))
+p = ggplot(ciInfo2, aes(x=type, y=mean / 100, fill=model)) +
+     geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) +
+     geom_errorbar(aes(ymin=lower / 100, ymax=upper / 100),  width=.2, position=position_dodge(0.8), size = 0.7) +
+     facet_grid(metric ~ ., scales = "free") +
+     xlab(NULL) +
+     ylab(NULL) +
+     scale_fill_brewer("Maximum size:\n", palette = "Set3") +
+     scale_y_continuous(labels = percent, limits = c(-0.005, 0.17)) + theme_bw(base_size = 16)
 
 p
 png(filename = "blade_vs_drawer_ic.png", width = 550, height = 250)
