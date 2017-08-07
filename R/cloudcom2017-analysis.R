@@ -381,11 +381,19 @@ library(reshape2)
 
 ciInfo <- read.table("resource_grain_ic_fabio.dat", header = T)
 ciInfo$type <- factor(ciInfo$type, c("Pending", "Unused", "Idleness" ))
-ciInfo = ciInfo %>% mutate(aux = paste(grain, infra))
-ciInfo$infra = factor(ciInfo$aux, c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "ram medium, small", "ram medium, medium", "ram medium, large"))
+ciInfo = ciInfo %>% mutate(aux = paste(grain, infra)) %>% select(-grain)
 
-colors <- c("#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#ffffb3", "#80b1d3")
-labels <- c("small, medium", "medium, medium", "large, medium", "medium, small", "medium, medium", "medium, large")
+head(ciInfo)
+
+df_aux = data.frame(metric = toupper(c("cpu", "cpu", "cpu", "ram", "ram", "ram")), type = rep(c("Pending", "Unused", "Idleness" ), 2), 
+                    infra = "space", mean = NA, lower = NA, upper = NA,
+                    model = "blade-on", aux = "space") %>% select(model, infra, upper, mean, lower, type, metric, aux)
+
+ciInfo = rbind(ciInfo, df_aux)
+
+ciInfo$infra = factor(ciInfo$aux, c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "space", "ram medium, small", "ram medium, medium", "ram medium, large"))
+colors <- c("#8dd3c7", "#ffffb3", "#bebada", "#FFFFFF", "#fb8072", "#ffffb3", "#80b1d3")
+labels <- c("small, medium", "medium, medium", "large, medium", "space", "medium, small", "medium, medium", "medium, large")
 
 p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra)) + #, group = interaction(infra, grain))) + 
   geom_bar(stat="identity", position=position_dodge(0.8), width = 0.7) + 
@@ -394,7 +402,7 @@ p = ggplot(ciInfo, aes(x=type, y=mean / 100, fill=infra)) + #, group = interacti
   xlab(NULL) + 
   ylab(NULL) +
   scale_fill_manual("Size of grain (CPU, RAM):", 
-                    breaks=c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "ram medium, small", "ram medium, medium", "ram medium, large"),
+                    breaks=c("cpu small, medium", "cpu medium, medium", "cpu large, medium", "space", "ram medium, small", "ram medium, medium", "ram medium, large"),
                     values = colors,
                     labels = labels) + 
   scale_x_discrete() +
